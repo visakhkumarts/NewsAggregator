@@ -1015,7 +1015,93 @@ curl -X GET "http://localhost:8000/api/aggregator/dashboard" \
 
 ## Rate Limiting
 
-Currently, rate limiting is not implemented. For production use, implement proper rate limiting to prevent abuse.
+The API implements **Laravel's built-in throttling middleware** to prevent abuse and ensure fair usage. Different endpoints have different rate limits based on their sensitivity and usage patterns.
+
+### 📊 **Rate Limit Configuration**
+
+| Endpoint Category | Rate Limit | Description |
+|------------------|------------|-------------|
+| **Authentication** | 5 requests/minute | Login and registration endpoints |
+| **User Preferences** | 50 requests/minute | Authenticated user preference endpoints |
+| **Articles** | 100 requests/minute | Public article endpoints |
+| **Sources/Categories** | 60 requests/minute | News sources and categories |
+| **Aggregator** | 30 requests/minute | News aggregation and statistics |
+
+### 🚨 **Rate Limit Response**
+
+When rate limits are exceeded, the API returns:
+
+**HTTP Status:** `429 Too Many Requests`
+
+**Response:**
+```json
+{
+  "success": false,
+  "message": "Too Many Attempts.",
+  "retry_after": 60
+}
+```
+
+### 📋 **Rate Limit Headers**
+
+The API includes rate limit information in response headers:
+
+```
+X-RateLimit-Limit: 5
+X-RateLimit-Remaining: 3
+X-RateLimit-Reset: 1640995200
+Retry-After: 60
+```
+
+### 🔧 **Rate Limit Details**
+
+#### **Authentication Endpoints**
+- **Login/Register:** 5 requests per minute per IP
+- **Logout/Me/Refresh:** 20 requests per minute per authenticated user
+
+#### **Public Endpoints**
+- **Articles:** 100 requests per minute per IP
+- **Sources/Categories:** 60 requests per minute per IP
+
+#### **Protected Endpoints**
+- **User Preferences:** 50 requests per minute per authenticated user
+- **Personalized Articles:** 50 requests per minute per authenticated user
+
+#### **Admin Endpoints**
+- **Aggregator:** 30 requests per minute per IP
+
+### 💡 **Best Practices**
+
+1. **Implement Exponential Backoff:** If you receive a 429 response, wait before retrying
+2. **Cache Responses:** Store API responses locally to reduce API calls
+3. **Batch Requests:** Combine multiple requests when possible
+4. **Monitor Headers:** Check rate limit headers to avoid hitting limits
+
+### 🧪 **Testing Rate Limits**
+
+You can test rate limiting by making rapid requests to any endpoint:
+
+```bash
+# This will eventually return a 429 response
+for i in {1..10}; do
+  curl -X GET "http://localhost:8000/api/auth/login" \
+    -H "Accept: application/json"
+  echo "Request $i completed"
+done
+```
+
+### ⚙️ **Configuration**
+
+Rate limits are configured in `routes/api.php` using Laravel's throttle middleware:
+
+```php
+// Example: 5 requests per minute
+Route::middleware(['throttle:5,1'])->group(function () {
+    // Routes here
+});
+```
+
+**Format:** `throttle:requests,minutes`
 
 ## Caching
 
