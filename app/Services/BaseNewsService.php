@@ -47,23 +47,32 @@ abstract class BaseNewsService implements NewsServiceInterface
     protected function makeRequest(string $endpoint, array $params = []): array
     {
         try {
-            $response = Http::timeout(30)->get($this->baseUrl . $endpoint, $params);
+            $url = $this->baseUrl . $endpoint;
+            $response = Http::timeout(30)->get($url, $params);
 
             if (!$response->successful()) {
                 Log::error("API request failed for {$this->serviceName}", [
                     'status' => $response->status(),
                     'body' => $response->body(),
                     'endpoint' => $endpoint,
+                    'url' => $url,
                     'params' => $params
                 ]);
                 return [];
             }
 
-            return $response->json();
+            $data = $response->json();
+            
+            if (!$this->validateApiResponse($data)) {
+                return [];
+            }
+
+            return $data;
         } catch (\Exception $e) {
             Log::error("API request exception for {$this->serviceName}", [
                 'message' => $e->getMessage(),
                 'endpoint' => $endpoint,
+                'url' => $this->baseUrl . $endpoint,
                 'params' => $params
             ]);
             return [];
@@ -71,79 +80,54 @@ abstract class BaseNewsService implements NewsServiceInterface
     }
 
     /**
-     * Store articles in the database.
+     * Validate API response data.
      */
-    protected function storeArticles(array $articles): int
+    protected function validateApiResponse(array $response): bool
     {
-        $storedCount = 0;
-
-        foreach ($articles as $articleData) {
-            try {
-                $article = $this->createArticle($articleData);
-                if ($article) {
-                    $storedCount++;
-                }
-            } catch (\Exception $e) {
-                Log::error("Failed to store article for {$this->serviceName}", [
-                    'message' => $e->getMessage(),
-                    'article_data' => $articleData
-                ]);
-            }
+        if (empty($response)) {
+            Log::warning("Empty API response from {$this->serviceName}");
+            return false;
         }
 
-        return $storedCount;
+        return true;
     }
 
     /**
-     * Create an article from API data.
+     * Validate article data before processing.
      */
-    protected function createArticle(array $data): ?Article
+    protected function validateArticleData(array $data): bool
     {
-        // Check if article already exists
-        if (isset($data['url']) && Article::where('url', $data['url'])->exists()) {
-            return null;
+        $requiredFields = ['title', 'url'];
+        
+        foreach ($requiredFields as $field) {
+            if (empty($data[$field])) {
+                Log::warning("Missing required field '{$field}' in article data", [
+                    'service' => $this->serviceName,
+                    'data' => $data
+                ]);
+                return false;
+            }
         }
 
-        // Find or create category
-        $category = null;
-        if (isset($data['category'])) {
-            $category = Category::firstOrCreate(
-                ['slug' => Str::slug($data['category'])],
-                [
-                    'name' => $data['category'],
-                    'is_active' => true
-                ]
-            );
-        }
-
-        return Article::create([
-            'news_source_id' => $this->newsSource->id,
-            'category_id' => $category?->id,
-            'external_id' => $data['external_id'] ?? null,
-            'title' => $data['title'],
-            'description' => $data['description'] ?? null,
-            'content' => $data['content'] ?? null,
-            'url' => $data['url'],
-            'image_url' => $data['image_url'] ?? null,
-            'author' => $data['author'] ?? null,
-            'published_at' => $this->parsePublishedDate($data['published_at'] ?? null),
-            'metadata' => $data['metadata'] ?? null,
-        ]);
+        return true;
     }
 
     /**
      * Parse published date from various formats.
      */
-    protected function parsePublishedDate($dateString): Carbon
+    protected function parsePublishedDate(?string $dateString): Carbon
     {
-        if (!$dateString) {
+        if (empty($dateString)) {
             return Carbon::now();
         }
 
         try {
             return Carbon::parse($dateString);
         } catch (\Exception $e) {
-            Log::warning("Failed to parse date: {$dateString}");
+            Log::warning("Failed to parse date: {$dateString}", [
+                'service' => $this->serviceName,
+                'error' => $e->getMessage()
+            ]);
             return Carbon::now();
         }
     }

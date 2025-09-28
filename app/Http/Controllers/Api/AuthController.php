@@ -11,8 +11,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Laravel\Sanctum\NewAccessToken;
 
 class AuthController extends Controller
 {
@@ -21,12 +21,15 @@ class AuthController extends Controller
      */
     public function register(RegisterRequest $request): JsonResponse
     {
+        /** @var User $user */
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'api_token' => Str::random(80),
         ]);
+
+        /** @var NewAccessToken $token */
+        $token = $user->createToken('auth-token');
 
         return ApiResponseResource::success([
             'user' => [
@@ -35,7 +38,7 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'created_at' => $user->created_at,
             ],
-            'token' => $user->api_token,
+            'token' => $token->plainTextToken,
             'token_type' => 'Bearer'
         ], 'User registered successfully', 201);
     }
@@ -55,11 +58,10 @@ class AuthController extends Controller
             ], 401);
         }
 
+        /** @var User $user */
         $user = Auth::user();
-        
-        // Generate new token
-        $user->api_token = Str::random(80);
-        $user->save();
+        /** @var NewAccessToken $token */
+        $token = $user->createToken('auth-token');
 
         return ApiResponseResource::success([
             'user' => [
@@ -68,7 +70,7 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'created_at' => $user->created_at,
             ],
-            'token' => $user->api_token,
+            'token' => $token->plainTextToken,
             'token_type' => 'Bearer'
         ], 'Login successful');
     }
@@ -78,9 +80,7 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $user->api_token = null;
-        $user->save();
+        $request->user()->currentAccessToken()->delete();
 
         return ApiResponseResource::success(null, 'Logout successful');
     }
@@ -107,14 +107,16 @@ class AuthController extends Controller
      */
     public function refresh(Request $request): JsonResponse
     {
+        /** @var User $user */
         $user = $request->user();
         
-        // Generate new token
-        $user->api_token = Str::random(80);
-        $user->save();
+        // Revoke current token and create new one
+        $request->user()->currentAccessToken()->delete();
+        /** @var NewAccessToken $token */
+        $token = $user->createToken('auth-token');
 
         return ApiResponseResource::success([
-            'token' => $user->api_token,
+            'token' => $token->plainTextToken,
             'token_type' => 'Bearer'
         ], 'Token refreshed successfully');
     }

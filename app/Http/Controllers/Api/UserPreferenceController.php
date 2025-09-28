@@ -15,20 +15,21 @@ use Illuminate\Support\Facades\Auth;
 class UserPreferenceController extends Controller
 {
     /**
-     * Get user preferences.
+     * Get the authenticated user.
      */
-    public function index(): JsonResponse
+    protected function getAuthenticatedUser(): \App\Models\User
     {
-        $user = Auth::user();
-        
-        if (!$user) {
-            return ApiResponseResource::error('User not authenticated', null, 401);
-        }
+        return Auth::user();
+    }
 
+    /**
+     * Get or create user preferences.
+     */
+    protected function getOrCreatePreferences(\App\Models\User $user): \App\Models\UserPreference
+    {
         $preferences = $user->preferences;
         
         if (!$preferences) {
-            // Create default preferences if none exist
             $preferences = UserPreference::create([
                 'user_id' => $user->id,
                 'preferred_sources' => [],
@@ -42,22 +43,40 @@ class UserPreferenceController extends Controller
                 'refresh_interval' => 300,
             ]);
         }
-
-        return ApiResponseResource::success(new UserPreferenceResource($preferences));
+        
+        return $preferences;
     }
+
+    /**
+     * Get user preferences.
+     */
+    public function index(): JsonResponse
+    {
+        try {
+            $user = $this->getAuthenticatedUser();
+            $preferences = $this->getOrCreatePreferences($user);
+
+            return ApiResponseResource::success(new UserPreferenceResource($preferences));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to get user preferences', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id()
+            ]);
+            
+            return ApiResponseResource::error('Failed to retrieve user preferences', null, 500);
+        }
+    }
+
 
     /**
      * Update user preferences.
      */
     public function update(Request $request): JsonResponse
     {
-        $user = Auth::user();
-        
-        if (!$user) {
-            return ApiResponseResource::error('User not authenticated', null, 401);
-        }
+        try {
+            $user = $this->getAuthenticatedUser();
 
-        $request->validate([
+            $request->validate([
             'preferred_sources' => 'nullable|array',
             'preferred_sources.*' => 'integer|exists:news_sources,id',
             'preferred_categories' => 'nullable|array',
@@ -72,28 +91,33 @@ class UserPreferenceController extends Controller
             'refresh_interval' => 'nullable|integer|min:60|max:3600',
         ]);
 
-        $preferences = $user->preferences;
-        
-        if (!$preferences) {
-            $preferences = new UserPreference();
-            $preferences->user_id = $user->id;
+            $preferences = $this->getOrCreatePreferences($user);
+
+            $preferences->fill($request->only([
+                'preferred_sources',
+                'preferred_categories', 
+                'preferred_authors',
+                'language',
+                'country',
+                'articles_per_page',
+                'show_images',
+                'auto_refresh',
+                'refresh_interval',
+            ]));
+
+            $preferences->save();
+
+            return ApiResponseResource::success(new UserPreferenceResource($preferences), 'Preferences updated successfully');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ApiResponseResource::error('Validation failed', $e->errors(), 422);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to update user preferences', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id()
+            ]);
+            
+            return ApiResponseResource::error('Failed to update preferences', null, 500);
         }
-
-        $preferences->fill($request->only([
-            'preferred_sources',
-            'preferred_categories', 
-            'preferred_authors',
-            'language',
-            'country',
-            'articles_per_page',
-            'show_images',
-            'auto_refresh',
-            'refresh_interval',
-        ]));
-
-        $preferences->save();
-
-        return ApiResponseResource::success(new UserPreferenceResource($preferences), 'Preferences updated successfully');
     }
 
     /**
@@ -101,30 +125,28 @@ class UserPreferenceController extends Controller
      */
     public function addPreferredSource(Request $request): JsonResponse
     {
-        $user = Auth::user();
-        
-        if (!$user) {
-            return ApiResponseResource::error('User not authenticated', null, 401);
-        }
+        try {
+            $user = $this->getAuthenticatedUser();
 
-        $request->validate([
-            'source_id' => 'required|integer|exists:news_sources,id'
-        ]);
-
-        $preferences = $user->preferences;
-        
-        if (!$preferences) {
-            $preferences = UserPreference::create([
-                'user_id' => $user->id,
-                'preferred_sources' => [],
-                'preferred_categories' => [],
-                'preferred_authors' => [],
+            $request->validate([
+                'source_id' => 'required|integer|exists:news_sources,id'
             ]);
+
+            $preferences = $this->getOrCreatePreferences($user);
+            $preferences->addPreferredSource($request->source_id);
+
+            return ApiResponseResource::success(new UserPreferenceResource($preferences), 'Source added to preferences');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ApiResponseResource::error('Validation failed', $e->errors(), 422);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to add preferred source', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id(),
+                'source_id' => $request->get('source_id')
+            ]);
+            
+            return ApiResponseResource::error('Failed to add source to preferences', null, 500);
         }
-
-        $preferences->addPreferredSource($request->source_id);
-
-        return ApiResponseResource::success(new UserPreferenceResource($preferences), 'Source added to preferences');
     }
 
     /**
@@ -132,23 +154,31 @@ class UserPreferenceController extends Controller
      */
     public function removePreferredSource(Request $request): JsonResponse
     {
-        $user = Auth::user();
-        
-        if (!$user) {
-            return ApiResponseResource::error('User not authenticated', null, 401);
+        try {
+            $user = $this->getAuthenticatedUser();
+
+            $request->validate([
+                'source_id' => 'required|integer|exists:news_sources,id'
+            ]);
+
+            $preferences = $user->preferences;
+            
+            if ($preferences) {
+                $preferences->removePreferredSource($request->source_id);
+            }
+
+            return ApiResponseResource::success(new UserPreferenceResource($preferences), 'Source removed from preferences');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ApiResponseResource::error('Validation failed', $e->errors(), 422);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to remove preferred source', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id(),
+                'source_id' => $request->get('source_id')
+            ]);
+            
+            return ApiResponseResource::error('Failed to remove source from preferences', null, 500);
         }
-
-        $request->validate([
-            'source_id' => 'required|integer|exists:news_sources,id'
-        ]);
-
-        $preferences = $user->preferences;
-        
-        if ($preferences) {
-            $preferences->removePreferredSource($request->source_id);
-        }
-
-        return ApiResponseResource::success(new UserPreferenceResource($preferences), 'Source removed from preferences');
     }
 
     /**
@@ -156,30 +186,28 @@ class UserPreferenceController extends Controller
      */
     public function addPreferredCategory(Request $request): JsonResponse
     {
-        $user = Auth::user();
-        
-        if (!$user) {
-            return ApiResponseResource::error('User not authenticated', null, 401);
-        }
+        try {
+            $user = $this->getAuthenticatedUser();
 
-        $request->validate([
-            'category_id' => 'required|integer|exists:categories,id'
-        ]);
-
-        $preferences = $user->preferences;
-        
-        if (!$preferences) {
-            $preferences = UserPreference::create([
-                'user_id' => $user->id,
-                'preferred_sources' => [],
-                'preferred_categories' => [],
-                'preferred_authors' => [],
+            $request->validate([
+                'category_id' => 'required|integer|exists:categories,id'
             ]);
+
+            $preferences = $this->getOrCreatePreferences($user);
+            $preferences->addPreferredCategory($request->category_id);
+
+            return ApiResponseResource::success(new UserPreferenceResource($preferences), 'Category added to preferences');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ApiResponseResource::error('Validation failed', $e->errors(), 422);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to add preferred category', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id(),
+                'category_id' => $request->get('category_id')
+            ]);
+            
+            return ApiResponseResource::error('Failed to add category to preferences', null, 500);
         }
-
-        $preferences->addPreferredCategory($request->category_id);
-
-        return ApiResponseResource::success(new UserPreferenceResource($preferences), 'Category added to preferences');
     }
 
     /**
@@ -187,23 +215,31 @@ class UserPreferenceController extends Controller
      */
     public function removePreferredCategory(Request $request): JsonResponse
     {
-        $user = Auth::user();
-        
-        if (!$user) {
-            return ApiResponseResource::error('User not authenticated', null, 401);
+        try {
+            $user = $this->getAuthenticatedUser();
+
+            $request->validate([
+                'category_id' => 'required|integer|exists:categories,id'
+            ]);
+
+            $preferences = $user->preferences;
+            
+            if ($preferences) {
+                $preferences->removePreferredCategory($request->category_id);
+            }
+
+            return ApiResponseResource::success(new UserPreferenceResource($preferences), 'Category removed from preferences');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ApiResponseResource::error('Validation failed', $e->errors(), 422);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to remove preferred category', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id(),
+                'category_id' => $request->get('category_id')
+            ]);
+            
+            return ApiResponseResource::error('Failed to remove category from preferences', null, 500);
         }
-
-        $request->validate([
-            'category_id' => 'required|integer|exists:categories,id'
-        ]);
-
-        $preferences = $user->preferences;
-        
-        if ($preferences) {
-            $preferences->removePreferredCategory($request->category_id);
-        }
-
-        return ApiResponseResource::success(new UserPreferenceResource($preferences), 'Category removed from preferences');
     }
 
     /**
@@ -211,59 +247,64 @@ class UserPreferenceController extends Controller
      */
     public function personalizedArticles(Request $request): JsonResponse
     {
-        $user = Auth::user();
-        
-        if (!$user) {
-            return ApiResponseResource::error('User not authenticated', null, 401);
-        }
+        try {
+            $user = $this->getAuthenticatedUser();
 
-        $preferences = $user->preferences;
+            $preferences = $user->preferences;
         
-        if (!$preferences) {
-            // Return regular articles if no preferences
-            $service = app(\App\Services\NewsAggregatorService::class);
-            $result = $service->getArticles($request->only(['search', 'date_from', 'date_to', 'featured']), $request->get('page', 1), $request->get('per_page', 20));
+            if (!$preferences) {
+                // Return regular articles if no preferences
+                $service = app(\App\Services\NewsAggregatorService::class);
+                $result = $service->getArticles($request->only(['search', 'date_from', 'date_to', 'featured']), $request->get('page', 1), $request->get('per_page', 20));
+                
+                return ApiResponseResource::success([
+                    'data' => \App\Http\Resources\ArticleResource::collection($result['data']),
+                    'pagination' => $result['pagination'],
+                    'preferences_applied' => []
+                ]);
+            }
+
+            // Build filters based on user preferences
+            $filters = $request->only([
+                'search', 'date_from', 'date_to', 'featured'
+            ]);
+
+            // Add user preferences to filters
+            if ($preferences->preferred_sources) {
+                $filters['preferred_sources'] = $preferences->preferred_sources;
+            }
             
+            if ($preferences->preferred_categories) {
+                $filters['preferred_categories'] = $preferences->preferred_categories;
+            }
+            
+            if ($preferences->preferred_authors) {
+                $filters['preferred_authors'] = $preferences->preferred_authors;
+            }
+
+            $page = $request->get('page', 1);
+            $perPage = $request->get('per_page', $preferences->articles_per_page ?? 20);
+
+            // Use the news aggregator service with personalized filters
+            $service = app(\App\Services\NewsAggregatorService::class);
+            $result = $service->getPersonalizedArticles($filters, $page, $perPage);
+
             return ApiResponseResource::success([
                 'data' => \App\Http\Resources\ArticleResource::collection($result['data']),
                 'pagination' => $result['pagination'],
-                'preferences_applied' => []
+                'preferences_applied' => [
+                    'sources' => $preferences->preferred_sources ?? [],
+                    'categories' => $preferences->preferred_categories ?? [],
+                    'authors' => $preferences->preferred_authors ?? [],
+                ]
             ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to get personalized articles', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id()
+            ]);
+            
+            return ApiResponseResource::error('Failed to retrieve personalized articles', null, 500);
         }
-
-        // Build filters based on user preferences
-        $filters = $request->only([
-            'search', 'date_from', 'date_to', 'featured'
-        ]);
-
-        // Add user preferences to filters
-        if ($preferences->preferred_sources) {
-            $filters['preferred_sources'] = $preferences->preferred_sources;
-        }
-        
-        if ($preferences->preferred_categories) {
-            $filters['preferred_categories'] = $preferences->preferred_categories;
-        }
-        
-        if ($preferences->preferred_authors) {
-            $filters['preferred_authors'] = $preferences->preferred_authors;
-        }
-
-        $page = $request->get('page', 1);
-        $perPage = $request->get('per_page', $preferences->articles_per_page ?? 20);
-
-        // Use the news aggregator service with personalized filters
-        $service = app(\App\Services\NewsAggregatorService::class);
-        $result = $service->getPersonalizedArticles($filters, $page, $perPage);
-
-        return ApiResponseResource::success([
-            'data' => \App\Http\Resources\ArticleResource::collection($result['data']),
-            'pagination' => $result['pagination'],
-            'preferences_applied' => [
-                'sources' => $preferences->preferred_sources ?? [],
-                'categories' => $preferences->preferred_categories ?? [],
-                'authors' => $preferences->preferred_authors ?? [],
-            ]
-        ]);
     }
 }

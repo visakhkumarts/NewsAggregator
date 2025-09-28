@@ -60,14 +60,25 @@ class ArticleController extends Controller
      */
     public function featured(Request $request): JsonResponse
     {
-        $request->validate([
-            'limit' => 'nullable|integer|min:1|max:50'
-        ]);
-        
-        $limit = $request->get('limit', 5);
-        $articles = $this->newsAggregatorService->getFeaturedArticles($limit);
+        try {
+            $request->validate([
+                'limit' => 'nullable|integer|min:1|max:50'
+            ]);
+            
+            $limit = $request->get('limit', 5);
+            $articles = $this->newsAggregatorService->getFeaturedArticles($limit);
 
-        return ApiResponseResource::success(ArticleResource::collection($articles));
+            return ApiResponseResource::success(ArticleResource::collection($articles));
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ApiResponseResource::error('Validation failed', $e->errors(), 422);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to get featured articles', [
+                'error' => $e->getMessage(),
+                'limit' => $request->get('limit')
+            ]);
+            
+            return ApiResponseResource::error('Failed to retrieve featured articles', null, 500);
+        }
     }
 
     /**
@@ -75,23 +86,35 @@ class ArticleController extends Controller
      */
     public function byCategory(Request $request, int $categoryId): JsonResponse
     {
-        $request->validate([
-            'limit' => 'nullable|integer|min:1|max:100'
-        ]);
-        
-        $category = Category::find($categoryId);
-        
-        if (!$category) {
-            return ApiResponseResource::notFound('Category not found');
+        try {
+            $request->validate([
+                'limit' => 'nullable|integer|min:1|max:100'
+            ]);
+            
+            $category = Category::find($categoryId);
+            
+            if (!$category) {
+                return ApiResponseResource::notFound('Category not found');
+            }
+
+            $limit = $request->get('limit', 20);
+            $articles = $this->newsAggregatorService->getArticlesByCategory($categoryId, $limit);
+
+            return ApiResponseResource::success([
+                'data' => ArticleResource::collection($articles),
+                'category' => new \App\Http\Resources\CategoryResource($category)
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ApiResponseResource::error('Validation failed', $e->errors(), 422);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to get articles by category', [
+                'error' => $e->getMessage(),
+                'category_id' => $categoryId,
+                'limit' => $request->get('limit')
+            ]);
+            
+            return ApiResponseResource::error('Failed to retrieve articles for this category', null, 500);
         }
-
-        $limit = $request->get('limit', 20);
-        $articles = $this->newsAggregatorService->getArticlesByCategory($categoryId, $limit);
-
-        return ApiResponseResource::success([
-            'data' => ArticleResource::collection($articles),
-            'category' => new \App\Http\Resources\CategoryResource($category)
-        ]);
     }
 
     /**
@@ -99,23 +122,35 @@ class ArticleController extends Controller
      */
     public function bySource(Request $request, int $sourceId): JsonResponse
     {
-        $request->validate([
-            'limit' => 'nullable|integer|min:1|max:100'
-        ]);
-        
-        $source = NewsSource::find($sourceId);
-        
-        if (!$source) {
-            return ApiResponseResource::notFound('News source not found');
+        try {
+            $request->validate([
+                'limit' => 'nullable|integer|min:1|max:100'
+            ]);
+            
+            $source = NewsSource::find($sourceId);
+            
+            if (!$source) {
+                return ApiResponseResource::notFound('News source not found');
+            }
+
+            $limit = $request->get('limit', 20);
+            $articles = $this->newsAggregatorService->getArticlesBySource($sourceId, $limit);
+
+            return ApiResponseResource::success([
+                'data' => ArticleResource::collection($articles),
+                'source' => new \App\Http\Resources\NewsSourceResource($source)
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ApiResponseResource::error('Validation failed', $e->errors(), 422);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to get articles by source', [
+                'error' => $e->getMessage(),
+                'source_id' => $sourceId,
+                'limit' => $request->get('limit')
+            ]);
+            
+            return ApiResponseResource::error('Failed to retrieve articles for this source', null, 500);
         }
-
-        $limit = $request->get('limit', 20);
-        $articles = $this->newsAggregatorService->getArticlesBySource($sourceId, $limit);
-
-        return ApiResponseResource::success([
-            'data' => ArticleResource::collection($articles),
-            'source' => new \App\Http\Resources\NewsSourceResource($source)
-        ]);
     }
 
     public function search(ArticleSearchRequest $request): JsonResponse
@@ -133,20 +168,34 @@ class ArticleController extends Controller
         ]);
     }
 
+    /**
+     * Get latest articles.
+     */
     public function latest(Request $request): JsonResponse
     {
-        $request->validate([
-            'limit' => 'nullable|integer|min:1|max:100'
-        ]);
-        
-        $limit = $request->get('limit', 20);
-        
-        $articles = Article::with(['newsSource:id,name,slug,logo_url', 'category:id,name,slug,color'])
-            ->select(['id', 'title', 'description', 'url', 'image_url', 'author', 'published_at', 'view_count', 'is_featured', 'news_source_id', 'category_id', 'created_at'])
-            ->latest('published_at')
-            ->limit($limit)
-            ->get();
+        try {
+            $request->validate([
+                'limit' => 'nullable|integer|min:1|max:100'
+            ]);
+            
+            $limit = $request->get('limit', 20);
+            
+            $articles = Article::with(['newsSource:id,name,slug,logo_url', 'category:id,name,slug,color'])
+                ->select(['id', 'title', 'description', 'url', 'image_url', 'author', 'published_at', 'view_count', 'is_featured', 'news_source_id', 'category_id', 'created_at'])
+                ->latest('published_at')
+                ->limit($limit)
+                ->get();
 
-        return ApiResponseResource::success(ArticleResource::collection($articles));
+            return ApiResponseResource::success(ArticleResource::collection($articles));
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ApiResponseResource::error('Validation failed', $e->errors(), 422);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to get latest articles', [
+                'error' => $e->getMessage(),
+                'limit' => $request->get('limit')
+            ]);
+            
+            return ApiResponseResource::error('Failed to retrieve latest articles', null, 500);
+        }
     }
 }

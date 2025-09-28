@@ -38,7 +38,7 @@ Route::middleware(['throttle:5,1'])->prefix('auth')->group(function () {
 });
 
 // Protected authentication routes with moderate rate limiting
-Route::middleware(['api.token', 'throttle:20,1'])->prefix('auth')->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:20,1'])->prefix('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/refresh', [AuthController::class, 'refresh']);
@@ -85,7 +85,7 @@ Route::middleware(['throttle:60,1'])->prefix('categories')->group(function () {
 });
 
 // User Preferences (requires authentication) with moderate rate limiting
-Route::middleware(['api.token', 'throttle:50,1'])->prefix('user')->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:50,1'])->prefix('user')->group(function () {
     Route::get('/preferences', [UserPreferenceController::class, 'index']);
     Route::put('/preferences', [UserPreferenceController::class, 'update']);
     Route::post('/preferences/sources', [UserPreferenceController::class, 'addPreferredSource']);

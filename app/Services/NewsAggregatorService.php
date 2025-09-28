@@ -98,39 +98,10 @@ class NewsAggregatorService
 
         foreach ($articles as $articleData) {
             try {
-                // Check if article already exists
-                if (Article::where('url', $articleData['url'])->exists()) {
-                    continue;
+                $article = $this->createArticleFromData($articleData, $newsSource);
+                if ($article) {
+                    $storedCount++;
                 }
-
-                // Find or create category
-                $category = null;
-                if (isset($articleData['category'])) {
-                    $category = Category::firstOrCreate(
-                        ['slug' => Str::slug($articleData['category'])],
-                        [
-                            'name' => $articleData['category'],
-                            'is_active' => true
-                        ]
-                    );
-                }
-
-                Article::create([
-                    'news_source_id' => $newsSource->id,
-                    'category_id' => $category?->id,
-                    'external_id' => $articleData['external_id'] ?? null,
-                    'title' => $articleData['title'],
-                    'description' => $articleData['description'] ?? null,
-                    'content' => $articleData['content'] ?? null,
-                    'url' => $articleData['url'],
-                    'image_url' => $articleData['image_url'] ?? null,
-                    'author' => $articleData['author'] ?? null,
-                    'published_at' => $this->parseDate($articleData['published_at'] ?? null),
-                    'metadata' => $articleData['metadata'] ?? null,
-                ]);
-
-                $storedCount++;
-
             } catch (\Exception $e) {
                 Log::error("Failed to store article", [
                     'message' => $e->getMessage(),
@@ -149,12 +120,66 @@ class NewsAggregatorService
     }
 
     /**
-     * Parse published date from various formats.
-     * Reuses the logic from BaseNewsService to avoid duplication.
+     * Create an article from API data.
      */
-    protected function parseDate($dateString): \Carbon\Carbon
+    protected function createArticleFromData(array $data, NewsSource $newsSource): ?Article
     {
-        if (!$dateString) {
+        // Validate required fields
+        if (empty($data['title']) || empty($data['url'])) {
+            Log::warning("Skipping article with missing required fields", [
+                'data' => $data,
+                'news_source_id' => $newsSource->id
+            ]);
+            return null;
+        }
+
+        // Check if article already exists
+        if (Article::where('url', $data['url'])->exists()) {
+            return null;
+        }
+
+        // Find or create category
+        $category = $this->findOrCreateCategory($data['category'] ?? null);
+
+        return Article::create([
+            'news_source_id' => $newsSource->id,
+            'category_id' => $category?->id,
+            'external_id' => $data['external_id'] ?? null,
+            'title' => $data['title'],
+            'description' => $data['description'] ?? null,
+            'content' => $data['content'] ?? null,
+            'url' => $data['url'],
+            'image_url' => $data['image_url'] ?? null,
+            'author' => $data['author'] ?? null,
+            'published_at' => $this->parseDate($data['published_at'] ?? null),
+            'metadata' => $data['metadata'] ?? null,
+        ]);
+    }
+
+    /**
+     * Find or create a category.
+     */
+    protected function findOrCreateCategory(?string $categoryName): ?Category
+    {
+        if (empty($categoryName)) {
+            return null;
+        }
+
+        return Category::firstOrCreate(
+            ['slug' => Str::slug($categoryName)],
+            [
+                'name' => $categoryName,
+                'is_active' => true
+            ]
+        );
+    }
+
+    /**
+     * Parse published date from various formats.
+     */
+    protected function parseDate(?string $dateString): \Carbon\Carbon
+    {
+        if (empty($dateString)) {
             return \Carbon\Carbon::now();
         }
 
@@ -379,6 +404,9 @@ class NewsAggregatorService
         });
     }
 
+    /**
+     * Get the most active news source by article count.
+     */
     protected function getMostActiveSource(): ?array
     {
         $source = NewsSource::withCount('articles')
@@ -392,6 +420,9 @@ class NewsAggregatorService
         ] : null;
     }
 
+    /**
+     * Get the most popular category by article count.
+     */
     protected function getMostPopularCategory(): ?array
     {
         $category = Category::withCount('articles')
