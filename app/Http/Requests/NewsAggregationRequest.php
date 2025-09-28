@@ -44,3 +44,4 @@ class NewsAggregationRequest extends FormRequest
 
 
 
+

@@ -11,6 +11,7 @@ use App\Models\Category;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class UserPreferenceController extends Controller
 {
@@ -58,7 +59,7 @@ class UserPreferenceController extends Controller
 
             return ApiResponseResource::success(new UserPreferenceResource($preferences));
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to get user preferences', [
+            Log::error('Failed to get user preferences', [
                 'error' => $e->getMessage(),
                 'user_id' => Auth::id()
             ]);
@@ -111,7 +112,7 @@ class UserPreferenceController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ApiResponseResource::error('Validation failed', $e->errors(), 422);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to update user preferences', [
+            Log::error('Failed to update user preferences', [
                 'error' => $e->getMessage(),
                 'user_id' => Auth::id()
             ]);
@@ -139,7 +140,7 @@ class UserPreferenceController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ApiResponseResource::error('Validation failed', $e->errors(), 422);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to add preferred source', [
+            Log::error('Failed to add preferred source', [
                 'error' => $e->getMessage(),
                 'user_id' => Auth::id(),
                 'source_id' => $request->get('source_id')
@@ -171,7 +172,7 @@ class UserPreferenceController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ApiResponseResource::error('Validation failed', $e->errors(), 422);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to remove preferred source', [
+            Log::error('Failed to remove preferred source', [
                 'error' => $e->getMessage(),
                 'user_id' => Auth::id(),
                 'source_id' => $request->get('source_id')
@@ -200,7 +201,7 @@ class UserPreferenceController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ApiResponseResource::error('Validation failed', $e->errors(), 422);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to add preferred category', [
+            Log::error('Failed to add preferred category', [
                 'error' => $e->getMessage(),
                 'exception' => get_class($e),
                 'file' => $e->getFile(),
@@ -235,7 +236,7 @@ class UserPreferenceController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ApiResponseResource::error('Validation failed', $e->errors(), 422);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to remove preferred category', [
+            Log::error('Failed to remove preferred category', [
                 'error' => $e->getMessage(),
                 'exception' => get_class($e),
                 'file' => $e->getFile(),
@@ -333,7 +334,7 @@ class UserPreferenceController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to get personalized articles', [
+            Log::error('Failed to get personalized articles', [
                 'error' => $e->getMessage(),
                 'user_id' => Auth::id()
             ]);

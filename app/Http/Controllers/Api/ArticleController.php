@@ -13,6 +13,7 @@ use App\Models\NewsSource;
 use App\Services\NewsAggregatorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ArticleController extends Controller
 {
@@ -96,7 +97,7 @@ class ArticleController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ApiResponseResource::error('Validation failed', $e->errors(), 422);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to get featured articles', [
+            Log::error('Failed to get featured articles', [
                 'error' => $e->getMessage(),
                 'limit' => $request->get('limit')
             ]);
@@ -140,7 +141,7 @@ class ArticleController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ApiResponseResource::error('Validation failed', $e->errors(), 422);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to get articles by category', [
+            Log::error('Failed to get articles by category', [
                 'error' => $e->getMessage(),
                 'category_id' => $categoryId,
                 'limit' => $request->get('limit')
@@ -176,7 +177,7 @@ class ArticleController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ApiResponseResource::error('Validation failed', $e->errors(), 422);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to get articles by source', [
+            Log::error('Failed to get articles by source', [
                 'error' => $e->getMessage(),
                 'source_id' => $sourceId,
                 'limit' => $request->get('limit')
@@ -236,7 +237,7 @@ class ArticleController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ApiResponseResource::error('Validation failed', $e->errors(), 422);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to get latest articles', [
+            Log::error('Failed to get latest articles', [
                 'error' => $e->getMessage(),
                 'limit' => $request->get('limit')
             ]);
@@ -257,14 +258,12 @@ class ArticleController extends Controller
         }
         
         if (isset($filters['category_id'])) {
-            $category = \App\Models\Category::find($filters['category_id']);
-            $categoryName = $category ? $category->name : "category ID {$filters['category_id']}";
+            $categoryName = $this->newsAggregatorService->getCategoryName($filters['category_id']);
             $conditions[] = "category '{$categoryName}'";
         }
         
         if (isset($filters['source_id'])) {
-            $source = \App\Models\NewsSource::find($filters['source_id']);
-            $sourceName = $source ? $source->name : "source ID {$filters['source_id']}";
+            $sourceName = $this->newsAggregatorService->getSourceName($filters['source_id']);
             $conditions[] = "source '{$sourceName}'";
         }
         

@@ -563,4 +563,22 @@ class NewsAggregatorService
             Cache::forget($key);
         }
     }
+
+    /**
+     * Get category name by ID.
+     */
+    public function getCategoryName(int $categoryId): string
+    {
+        $category = Category::find($categoryId);
+        return $category ? $category->name : "category ID {$categoryId}";
+    }
+
+    /**
+     * Get source name by ID.
+     */
+    public function getSourceName(int $sourceId): string
+    {
+        $source = NewsSource::find($sourceId);
+        return $source ? $source->name : "source ID {$sourceId}";
+    }
 }
