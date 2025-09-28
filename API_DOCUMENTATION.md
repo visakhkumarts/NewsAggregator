@@ -1,8 +1,6 @@
 # News Aggregator API Documentation
 
-## Overview
-
-The News Aggregator API provides a comprehensive RESTful interface for accessing news articles from multiple sources including NewsAPI, The Guardian, and New York Times.
+Complete API reference for the News Aggregator backend service.
 
 ## Base URL
 
@@ -12,104 +10,59 @@ http://localhost:8000/api
 
 ## Authentication
 
-The API uses **Bearer Token Authentication** for protected endpoints. You need to obtain an API token by logging in or registering a user account.
+The API uses Bearer token authentication for protected endpoints. Obtain a token by registering or logging in.
 
-### 🔐 **Token Generation Process**
+### Register New User
+```http
+POST /api/auth/register
+Content-Type: application/json
 
-#### **Step 1: Register a New User (Optional)**
-```bash
-curl -X POST "http://localhost:8000/api/auth/register" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{
+{
     "name": "John Doe",
     "email": "john@example.com",
     "password": "password123",
     "password_confirmation": "password123"
-  }'
+}
 ```
 
+### Login
+```http
+POST /api/auth/login
+Content-Type: application/json
 
-#### **Step 2: Login with Existing User**
-```bash
-curl -X POST "http://localhost:8000/api/auth/login" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{
-    "email": "test@example.com",
+{
+  "email": "john@example.com",
     "password": "password123"
-  }'
-```
-
-
-#### **Step 3: Use Token for Protected Endpoints**
-```bash
-curl -X GET "http://localhost:8000/api/user/preferences" \
-  -H "Authorization: Bearer fCkUeiFr5SqkewBtGhBM8K9L2N3P4Q5R6S7T8U9V0W1X2Y3Z4A5B6C7D8E9F0G1H2I3J4K5L6M7N8O9P0Q1R2S3T4U5V6W7X8Y9Z0" \
-  -H "Accept: application/json"
-```
-
-
-### 🔄 **Token Management**
-
-#### **Refresh Token**
-```bash
-curl -X POST "http://localhost:8000/api/auth/refresh" \
-  -H "Authorization: Bearer YOUR_CURRENT_TOKEN" \
-  -H "Accept: application/json"
-```
-
-#### **Logout (Revoke Token)**
-```bash
-curl -X POST "http://localhost:8000/api/auth/logout" \
-  -H "Authorization: Bearer YOUR_CURRENT_TOKEN" \
-  -H "Accept: application/json"
-```
-
-#### **Get Current User Info**
-```bash
-curl -X GET "http://localhost:8000/api/auth/me" \
-  -H "Authorization: Bearer YOUR_CURRENT_TOKEN" \
-  -H "Accept: application/json"
-```
-
-### 🛡️ **Security Notes**
-
-- **Token Format**: 80-character random string
-- **Token Expiry**: Tokens don't expire automatically (logout to revoke)
-- **Token Storage**: Store tokens securely in your frontend application
-- **HTTPS**: Always use HTTPS in production
-- **Token Rotation**: Use refresh endpoint to rotate tokens periodically
-
-## Response Format
-
-All API responses follow a consistent JSON structure:
-
-### Success Response
-```json
-{
-  "success": true,
-  "data": [...],
-  "pagination": {
-    "current_page": 1,
-    "last_page": 10,
-    "per_page": 20,
-    "total": 200,
-    "has_more": true
-  }
 }
 ```
 
-### Error Response
-```json
-{
-  "success": false,
-  "message": "Error description",
-  "errors": {
-    "field": ["Error message"]
-  }
-}
+### Use Token for Protected Endpoints
+```http
+GET /api/user/preferences
+Authorization: Bearer YOUR_TOKEN_HERE
+Accept: application/json
 ```
+
+### Token Management
+
+**Refresh Token:**
+```http
+POST /api/auth/refresh
+Authorization: Bearer YOUR_CURRENT_TOKEN
+```
+
+**Logout:**
+```http
+POST /api/auth/logout
+Authorization: Bearer YOUR_CURRENT_TOKEN
+```
+
+**Get Current User Info:**
+```http
+GET /api/auth/me
+Authorization: Bearer YOUR_CURRENT_TOKEN
+```
+
 
 ## HTTP Status Codes
 
@@ -119,6 +72,7 @@ All API responses follow a consistent JSON structure:
 - `401` - Unauthorized
 - `404` - Not Found
 - `422` - Validation Error
+- `429` - Too Many Requests
 - `500` - Internal Server Error
 
 ## Endpoints
@@ -131,218 +85,63 @@ GET /api/articles
 ```
 
 **Query Parameters:**
-- `search` (string, optional): Search term for title, description, or content
-- `category_id` (integer, optional): Filter by category ID
-- `source_id` (integer, optional): Filter by news source ID
-- `author` (string, optional): Filter by author name
-- `date_from` (date, optional): Start date (YYYY-MM-DD)
-- `date_to` (date, optional): End date (YYYY-MM-DD)
-- `featured` (boolean, optional): Filter featured articles
-- `page` (integer, optional): Page number (default: 1)
-- `per_page` (integer, optional): Items per page (default: 20, max: 100)
-
-**Example Request:**
-```bash
-GET /api/articles?search=technology&category_id=1&page=1&per_page=20
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": 1,
-      "title": "Latest Technology News",
-      "description": "Breaking news in technology...",
-      "url": "https://example.com/article",
-      "image_url": "https://example.com/image.jpg",
-      "author": "John Doe",
-      "published_at": "2024-01-15T10:30:00Z",
-      "view_count": 150,
-      "is_featured": true,
-      "news_source": {
-        "id": 1,
-        "name": "Tech News",
-        "slug": "tech-news"
-      },
-      "category": {
-        "id": 1,
-        "name": "Technology",
-        "slug": "technology"
-      }
-    }
-  ],
-  "pagination": {
-    "current_page": 1,
-    "last_page": 5,
-    "per_page": 20,
-    "total": 100,
-    "has_more": true
-  }
-}
-```
+- `search` - Search in title, description, or content
+- `category_id` - Filter by category ID
+- `source_id` - Filter by news source ID  
+- `author` - Filter by author name
+- `date_from` & `date_to` - Date range (YYYY-MM-DD format)
+- `featured` - Show only featured articles (true/false)
+- `page` - Page number (default: 1)
+- `per_page` - Items per page (default: 20, max: 100)
 
 #### Get Specific Article
 ```http
 GET /api/articles/{id}
 ```
 
-**Parameters:**
-- `id` (integer, required): Article ID
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": 1,
-    "title": "Article Title",
-    "description": "Article description...",
-    "content": "Full article content...",
-    "url": "https://example.com/article",
-    "image_url": "https://example.com/image.jpg",
-    "author": "John Doe",
-    "published_at": "2024-01-15T10:30:00Z",
-    "view_count": 151,
-    "is_featured": true,
-    "news_source": {
-      "id": 1,
-      "name": "Tech News",
-      "slug": "tech-news"
-    },
-    "category": {
-      "id": 1,
-      "name": "Technology",
-      "slug": "technology"
-    }
-  }
-}
-```
-
 #### Get Featured Articles
 ```http
-GET /api/articles/featured
-```
-
-**Query Parameters:**
-- `limit` (integer, optional): Number of articles to return (default: 5)
-
-**Example Request:**
-```bash
-GET /api/articles/featured?limit=10
+GET /api/articles/featured?limit=5
 ```
 
 #### Get Latest Articles
 ```http
-GET /api/articles/latest
+GET /api/articles/latest?limit=20
 ```
-
-**Query Parameters:**
-- `limit` (integer, optional): Number of articles to return (default: 20)
 
 #### Search Articles
 ```http
-GET /api/articles/search
-```
-
-**Query Parameters:**
-- `q` (string, required): Search query (minimum 2 characters)
-- `page` (integer, optional): Page number (default: 1)
-- `per_page` (integer, optional): Items per page (default: 20, max: 100)
-
-**Example Request:**
-```bash
-GET /api/articles/search?q=artificial intelligence&page=1
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": [...],
-  "pagination": {...},
-  "query": "artificial intelligence"
-}
+GET /api/articles/search?q=search term
 ```
 
 #### Get Articles by Category
 ```http
-GET /api/articles/category/{categoryId}
+GET /api/articles/category/{categoryId}?limit=20
 ```
-
-**Parameters:**
-- `categoryId` (integer, required): Category ID
-
-**Query Parameters:**
-- `limit` (integer, optional): Number of articles to return (default: 20)
 
 #### Get Articles by Source
 ```http
-GET /api/articles/source/{sourceId}
+GET /api/articles/source/{sourceId}?limit=20
 ```
-
-**Parameters:**
-- `sourceId` (integer, required): News source ID
-
-**Query Parameters:**
-- `limit` (integer, optional): Number of articles to return (default: 20)
 
 ### News Sources
 
-#### Get All News Sources
+#### Get All Sources
 ```http
 GET /api/sources
 ```
 
-**Query Parameters:**
-- `active` (boolean, optional): Filter by active status
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": 1,
-      "name": "NewsAPI",
-      "slug": "newsapi",
-      "api_provider": "newsapi",
-      "description": "Comprehensive news API...",
-      "is_active": true,
-      "priority": 100,
-      "logo_url": "https://example.com/logo.png",
-      "website_url": "https://newsapi.org"
-    }
-  ]
-}
-```
-
-#### Get Active News Sources
+#### Get Active Sources
 ```http
 GET /api/sources/active
 ```
 
-#### Get News Source Statistics
+#### Get Source Statistics
 ```http
 GET /api/sources/statistics
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": 1,
-      "name": "NewsAPI",
-      "articles_count": 1500
-    }
-  ]
-}
-```
-
-#### Get Specific News Source
+#### Get Specific Source
 ```http
 GET /api/sources/{id}
 ```
@@ -352,26 +151,6 @@ GET /api/sources/{id}
 #### Get All Categories
 ```http
 GET /api/categories
-```
-
-**Query Parameters:**
-- `active` (boolean, optional): Filter by active status
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": 1,
-      "name": "Technology",
-      "slug": "technology",
-      "description": "Technology news and updates",
-      "color": "#10B981",
-      "is_active": true
-    }
-  ]
-}
 ```
 
 #### Get Active Categories
@@ -396,7 +175,7 @@ GET /api/categories/{id}
 POST /api/aggregator/aggregate
 ```
 
-**Request Body:**
+Request Body:
 ```json
 {
   "sources": ["newsapi", "guardian", "nytimes"],
@@ -405,53 +184,9 @@ POST /api/aggregator/aggregate
 }
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "News aggregation completed",
-  "data": {
-    "NewsAPI": {
-      "fetched": 50,
-      "stored": 45,
-      "status": "success"
-    },
-    "The Guardian": {
-      "fetched": 30,
-      "stored": 28,
-      "status": "success"
-    }
-  }
-}
-```
-
-#### Get Aggregation Statistics
+#### Get System Statistics
 ```http
 GET /api/aggregator/statistics
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "total_articles": 5000,
-    "articles_today": 150,
-    "articles_this_week": 1000,
-    "total_sources": 3,
-    "total_categories": 10,
-    "most_active_source": {
-      "id": 1,
-      "name": "NewsAPI",
-      "articles_count": 2500
-    },
-    "most_popular_category": {
-      "id": 1,
-      "name": "Technology",
-      "articles_count": 800
-    }
-  }
-}
 ```
 
 #### Get Dashboard Data
@@ -459,69 +194,17 @@ GET /api/aggregator/statistics
 GET /api/aggregator/dashboard
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "statistics": {...},
-    "featured_articles": [...],
-    "latest_articles": [...]
-  }
-}
+### User Preferences (Protected)
+
+> **Important:** User preferences are automatically created with default values when first accessed. You don't need to create them manually.
+
+#### Get User Preferences (Auto-creates if not exists)
+```http
+GET /api/user/preferences
+Authorization: Bearer YOUR_TOKEN
 ```
 
-## 🔑 **Complete Token Generation Scenario**
-
-### **Scenario: Getting Started with User Preferences**
-
-This scenario demonstrates the complete flow from user registration/login to accessing protected user preference endpoints.
-
-#### **Step 1: Login with Test Credentials**
-```bash
-# Login with pre-created test user
-curl -X POST "http://localhost:8000/api/auth/login" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{
-    "email": "test@example.com",
-    "password": "password123"
-  }'
-```
-
-**Expected Response:**
-```json
-{
-  "success": true,
-  "message": "Login successful",
-  "data": {
-    "user": {
-      "id": 1,
-      "name": "Test User",
-      "email": "test@example.com",
-      "created_at": "2024-01-15T10:30:00Z"
-    },
-    "token": "fCkUeiFr5SqkewBtGhBM8K9L2N3P4Q5R6S7T8U9V0W1X2Y3Z4A5B6C7D8E9F0G1H2I3J4K5L6M7N8O9P0Q1R2S3T4U5V6W7X8Y9Z0",
-    "token_type": "Bearer"
-  }
-}
-```
-
-#### **Step 2: Extract and Store Token**
-```bash
-# Save the token from the response above
-TOKEN="fCkUeiFr5SqkewBtGhBM8K9L2N3P4Q5R6S7T8U9V0W1X2Y3Z4A5B6C7D8E9F0G1H2I3J4K5L6M7N8O9P0Q1R2S3T4U5V6W7X8Y9Z0"
-```
-
-#### **Step 3: Access User Preferences**
-```bash
-# Get user preferences using the token
-curl -X GET "http://localhost:8000/api/user/preferences" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Accept: application/json"
-```
-
-**Expected Response:**
+**Response (First time - creates defaults):**
 ```json
 {
   "success": true,
@@ -543,299 +226,64 @@ curl -X GET "http://localhost:8000/api/user/preferences" \
 }
 ```
 
-#### **Step 4: Update User Preferences**
-```bash
-# Update user preferences
-curl -X PUT "http://localhost:8000/api/user/preferences" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{
+#### Update User Preferences
+```http
+PUT /api/user/preferences
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "preferred_sources": [1, 2, 3],
+  "preferred_categories": [1, 2],
+  "preferred_authors": ["John Doe", "Jane Smith"],
+  "language": "en",
+  "country": "us",
     "articles_per_page": 25,
     "show_images": true,
     "auto_refresh": true,
     "refresh_interval": 180
-  }'
-```
-
-#### **Step 5: Get Personalized Articles**
-```bash
-# Get personalized articles based on preferences
-curl -X GET "http://localhost:8000/api/user/personalized-articles?limit=5" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Accept: application/json"
-```
-
-### **Alternative: Register New User Scenario**
-
-#### **Step 1: Register New User**
-```bash
-curl -X POST "http://localhost:8000/api/auth/register" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{
-    "name": "Jane Smith",
-    "email": "jane@example.com",
-    "password": "mypassword123",
-    "password_confirmation": "mypassword123"
-  }'
-```
-
-**Expected Response:**
-```json
-{
-  "success": true,
-  "message": "User registered successfully",
-  "data": {
-    "user": {
-      "id": 2,
-      "name": "Jane Smith",
-      "email": "jane@example.com",
-      "created_at": "2024-01-15T11:00:00Z"
-    },
-    "token": "AbC123DeF456GhI789JkL012MnO345PqR678StU901VwX234YzA567BcD890EfG123HiJ456KlM789NoP012QrS345TuV678WxY901ZaB234CdE567FgH890IjK123LmN456OpQ789RsT012UvW345XyZ678",
-    "token_type": "Bearer"
-  }
 }
 ```
 
-#### **Step 2: Use New User Token**
-```bash
-# Save the new token
-NEW_TOKEN="AbC123DeF456GhI789JkL012MnO345PqR678StU901VwX234YzA567BcD890EfG123HiJ456KlM789NoP012QrS345TuV678WxY901ZaB234CdE567FgH890IjK123LmN456OpQ789RsT012UvW345XyZ678"
+**Available Fields:**
+- `preferred_sources` - Array of news source IDs
+- `preferred_categories` - Array of category IDs
+- `preferred_authors` - Array of author names
+- `language` - Language code (default: "en")
+- `country` - Country code (default: "us")
+- `articles_per_page` - Articles per page (default: 20, max: 100)
+- `show_images` - Show article images (default: true)
+- `auto_refresh` - Enable auto-refresh (default: false)
+- `refresh_interval` - Refresh interval in seconds (default: 300, min: 60, max: 3600)
 
-# Get preferences (will create defaults automatically)
-curl -X GET "http://localhost:8000/api/user/preferences" \
-  -H "Authorization: Bearer $NEW_TOKEN" \
-  -H "Accept: application/json"
-```
+#### Manage Preferred Sources
 
-// Run the demonstration
-demonstrateTokenUsage();
-```
+**Add Source:**
+```http
+POST /api/user/preferences/sources
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
 
-### **Common Error Scenarios**
-
-#### **Invalid Login Credentials**
-```bash
-curl -X POST "http://localhost:8000/api/auth/login" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{
-    "email": "test@example.com",
-    "password": "wrongpassword"
-  }'
-```
-
-**Response (401):**
-```json
 {
-  "success": false,
-  "message": "Invalid credentials",
-  "errors": {
-    "email": ["The provided credentials are incorrect."]
-  }
+  "source_id": 1
 }
 ```
 
-#### **Register Existing User**
-```bash
-curl -X POST "http://localhost:8000/api/auth/register" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{
-    "name": "Test User",
-    "email": "test@example.com",
-    "password": "password123",
-    "password_confirmation": "password123"
-  }'
-```
+**Remove Source:**
+```http
+DELETE /api/user/preferences/sources
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
 
-**Response (422):**
-```json
 {
-  "success": false,
-  "message": "Validation failed",
-  "errors": {
-    "email": ["This email address is already registered."]
-  }
+  "source_id": 1
 }
 ```
 
-#### **Invalid Email Format**
-```bash
-curl -X POST "http://localhost:8000/api/auth/login" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{
-    "email": "invalid-email",
-    "password": "password123"
-  }'
-```
+#### Manage Preferred Categories
 
-**Response (422):**
-```json
-{
-  "success": false,
-  "message": "Validation failed",
-  "errors": {
-    "email": ["Please provide a valid email address."]
-  }
-}
-```
-
-#### **Missing Password Confirmation**
-```bash
-curl -X POST "http://localhost:8000/api/auth/register" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{
-    "name": "New User",
-    "email": "newuser@example.com",
-    "password": "password123"
-  }'
-```
-
-**Response (422):**
-```json
-{
-  "success": false,
-  "message": "Validation failed",
-  "errors": {
-    "password": ["Password confirmation does not match."]
-  }
-}
-```
-
-#### **Missing Token**
-```bash
-curl -X GET "http://localhost:8000/api/user/preferences" \
-  -H "Accept: application/json"
-```
-
-**Response (401):**
-```json
-{
-  "success": false,
-  "message": "Token not provided"
-}
-```
-
-#### **Invalid Token**
-```bash
-curl -X GET "http://localhost:8000/api/user/preferences" \
-  -H "Authorization: Bearer invalid_token_here" \
-  -H "Accept: application/json"
-```
-
-**Response (401):**
-```json
-{
-  "success": false,
-  "message": "Invalid token"
-}
-```
-
-## 📚 API Examples & Scenarios
-
-### 🔍 **Article Fetching Examples**
-
-#### **1. Fetch All Articles (Basic)**
-```bash
-curl -X GET "http://localhost:8000/api/articles" \
-  -H "Accept: application/json"
-```
-
-```
-
-#### **2. Fetch Featured Articles**
-```bash
-curl -X GET "http://localhost:8000/api/articles/featured?limit=5" \
-  -H "Accept: application/json"
-```
-
-#### **3. Fetch Latest Articles**
-```bash
-curl -X GET "http://localhost:8000/api/articles/latest?limit=10" \
-  -H "Accept: application/json"
-```
-
-#### **4. Fetch Single Article**
-```bash
-curl -X GET "http://localhost:8000/api/articles/123" \
-  -H "Accept: application/json"
-```
-
----
-
-### 🔎 **Search Examples**
-
-#### **1. Basic Search**
-```bash
-curl -X GET "http://localhost:8000/api/articles/search?q=technology" \
-  -H "Accept: application/json"
-```
-
-#### **2. Advanced Search with Pagination**
-```bash
-curl -X GET "http://localhost:8000/api/articles/search?q=artificial%20intelligence&page=2&per_page=10" \
-  -H "Accept: application/json"
-```
-
-
-### 🎯 **Filtering Examples**
-
-#### **1. Filter by Category**
-```bash
-curl -X GET "http://localhost:8000/api/articles?category_id=1" \
-  -H "Accept: application/json"
-```
-
-#### **2. Filter by News Source**
-```bash
-curl -X GET "http://localhost:8000/api/articles?source_id=2" \
-  -H "Accept: application/json"
-```
-
-#### **3. Filter by Author**
-```bash
-curl -X GET "http://localhost:8000/api/articles?author=John%20Doe" \
-  -H "Accept: application/json"
-```
-
-#### **4. Filter by Date Range**
-```bash
-curl -X GET "http://localhost:8000/api/articles?date_from=2024-01-01&date_to=2024-01-31" \
-  -H "Accept: application/json"
-```
-
-#### **5. Filter Featured Articles Only**
-```bash
-curl -X GET "http://localhost:8000/api/articles?featured=true" \
-  -H "Accept: application/json"
-```
-
-#### **6. Complex Filtering (Multiple Criteria)**
-```bash
-curl -X GET "http://localhost:8000/api/articles?category_id=1&source_id=2&author=John%20Doe&featured=true&date_from=2024-01-01&date_to=2024-01-31&page=1&per_page=20" \
-  -H "Accept: application/json"
-```
-
----
-
-### 👤 **User Preferences Examples**
-
-#### **1. Get User Preferences**
-```bash
-curl -X GET "http://localhost:8000/api/user/preferences" \
-  -H "Accept: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE"
-```
-
-
-
-#### **2. Update User Preferences**
-```bash
+**. Update User Preferences**
+```http
 curl -X PUT "http://localhost:8000/api/user/preferences" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
@@ -848,192 +296,280 @@ curl -X PUT "http://localhost:8000/api/user/preferences" \
     "show_images": true,
     "auto_refresh": true,
     "refresh_interval": 180
-  }'
+  }
 ```
 
-#### **3. Add Preferred Source**
-```bash
-curl -X POST "http://localhost:8000/api/user/preferences/sources" \
-  -H "Accept: application/json" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
-  -d '{
+**Add Category:**
+```http
+POST /api/user/preferences/categories
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "category_id": 1
+}
+```
+
+**Remove Category:**
+```http
+DELETE /api/user/preferences/categories
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "category_id": 1
+}
+```
+
+#### Get Personalized Articles
+```http
+GET /api/user/personalized-articles
+Authorization: Bearer YOUR_TOKEN
+```
+
+Supports same query parameters as regular articles endpoint, plus user preferences are automatically applied.
+
+## Advanced Filtering
+
+The API supports comprehensive filtering across multiple criteria:
+
+### Date Filtering
+```javascript
+// Articles from a specific date
+GET /api/articles?date_from=2024-01-15&date_to=2024-01-15
+
+// Articles from the last week
+GET /api/articles?date_from=2024-01-08&date_to=2024-01-15
+
+// Articles from a specific month
+GET /api/articles?date_from=2024-01-01&date_to=2024-01-31
+```
+
+### Category Filtering
+```javascript
+// Get all technology articles
+GET /api/articles?category_id=1
+
+// Get business articles with pagination
+GET /api/articles?category_id=2&page=1&per_page=10
+```
+
+### Source Filtering
+```javascript
+// Get articles from NewsAPI only
+GET /api/articles?source_id=1
+
+// Get articles from The Guardian only
+GET /api/articles?source_id=2
+```
+
+### Author Filtering
+```javascript
+// Get articles by specific author
+GET /api/articles?author=John%20Doe
+
+// Get articles by author with partial name match
+GET /api/articles?author=Smith
+```
+
+### Featured Articles
+```javascript
+// Get only featured articles
+GET /api/articles?featured=true
+
+// Get featured articles from specific category
+GET /api/articles?featured=true&category_id=1
+```
+
+### Search with Filtering
+```javascript
+// Search for "AI" in technology category
+GET /api/articles?search=AI&category_id=1
+
+// Search for "climate" from specific source
+GET /api/articles?search=climate&source_id=2
+```
+
+### Complex Filtering
+```javascript
+// Multiple criteria combined
+GET /api/articles?category_id=1&source_id=2&date_from=2024-01-01&featured=true&search=technology
+```
+
+## Search Queries
+
+### Basic Search
+```javascript
+// Search in all articles
+GET /api/articles/search?q=artificial intelligence
+
+// Search with pagination
+GET /api/articles/search?q=technology&page=2&per_page=10
+```
+
+### Advanced Search
+```javascript
+// Search with filters
+GET /api/articles/search?q=climate change&category_id=1&date_from=2024-01-01
+
+// Search in specific source
+GET /api/articles/search?q=AI&source_id=2&featured=true
+```
+
+## User Preferences
+
+### How User Preferences Work
+
+1. **Automatic Creation**: User preferences are automatically created with default values when first accessed
+2. **No Manual Setup**: You don't need to create preferences manually - just call `GET /api/user/preferences`
+3. **Default Values**: New preferences start with sensible defaults
+4. **Individual Management**: You can add/remove individual sources and categories
+5. **Bulk Updates**: You can update multiple preferences at once
+
+### Preference Fields
+
+**Available Settings:**
+- `preferred_sources` - Array of news source IDs
+- `preferred_categories` - Array of category IDs  
+- `preferred_authors` - Array of author names
+- `language` - Preferred language (default: "en")
+- `country` - Preferred country (default: "us")
+- `articles_per_page` - Number of articles per page (default: 20)
+- `show_images` - Whether to show article images (default: true)
+- `auto_refresh` - Enable auto-refresh (default: false)
+- `refresh_interval` - Refresh interval in seconds (default: 300)
+
+### Managing Preferences
+
+**Get Current Preferences:**
+```http
+GET /api/user/preferences
+Authorization: Bearer YOUR_TOKEN
+```
+
+**Update Multiple Preferences:**
+```http
+PUT /api/user/preferences
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+    "preferred_sources": [1, 2, 3],
+    "preferred_categories": [1, 2],
+    "preferred_authors": ["John Doe", "Jane Smith"],
+    "articles_per_page": 25,
+    "show_images": true,
+    "auto_refresh": true,
+    "refresh_interval": 180
+}
+```
+
+**Add Individual Preferences:**
+
+Add Preferred Source:
+```http
+POST /api/user/preferences/sources
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
     "source_id": 1
-  }'
+}
 ```
 
-#### **4. Remove Preferred Source**
-```bash
-curl -X DELETE "http://localhost:8000/api/user/preferences/sources" \
-  -H "Accept: application/json" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
-  -d '{
-    "source_id": 1
-  }'
-```
+Add Preferred Category:
+```http
+POST /api/user/preferences/categories
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
 
-#### **5. Add Preferred Category**
-```bash
-curl -X POST "http://localhost:8000/api/user/preferences/categories" \
-  -H "Accept: application/json" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
-  -d '{
+{
     "category_id": 1
-  }'
+}
 ```
 
-#### **6. Remove Preferred Category**
-```bash
-curl -X DELETE "http://localhost:8000/api/user/preferences/categories" \
-  -H "Accept: application/json" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
-  -d '{
-    "category_id": 1
-  }'
+**Remove Individual Preferences:**
+
+Remove Preferred Source:
+```http
+DELETE /api/user/preferences/sources
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "source_id": 1
+}
 ```
 
----
+Remove Preferred Category:
+```http
+DELETE /api/user/preferences/categories
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
 
-### 🎯 **Personalized Articles Examples**
-
-#### **1. Get Personalized Feed**
-```bash
-curl -X GET "http://localhost:8000/api/user/personalized-articles" \
-  -H "Accept: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+{
+  "category_id": 1
+}
 ```
 
-#### **2. Personalized Feed with Search**
-```bash
-curl -X GET "http://localhost:8000/api/user/personalized-articles?search=technology" \
-  -H "Accept: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+## Personalized Articles
+
+### Get Personalized Feed
+```http
+GET /api/user/personalized-articles
+Authorization: Bearer YOUR_TOKEN
 ```
 
-#### **3. Personalized Feed with Filters**
-```bash
-curl -X GET "http://localhost:8000/api/user/personalized-articles?search=AI&featured=true&date_from=2024-01-01&page=1&per_page=15" \
-  -H "Accept: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+### Personalized Feed with Search
+```http
+GET /api/user/personalized-articles?search=technology
+Authorization: Bearer YOUR_TOKEN
 ```
 
-
-
-### 📊 **News Sources Examples**
-
-#### **1. Get All News Sources**
-```bash
-curl -X GET "http://localhost:8000/api/sources" \
-  -H "Accept: application/json"
+### Personalized Feed with Filters
+```http
+GET /api/user/personalized-articles?search=AI&featured=true&date_from=2024-01-01&page=1&per_page=15
+Authorization: Bearer YOUR_TOKEN
 ```
-
-#### **2. Get Active News Sources Only**
-```bash
-curl -X GET "http://localhost:8000/api/sources/active" \
-  -H "Accept: application/json"
-```
-
-#### **3. Get News Source Statistics**
-```bash
-curl -X GET "http://localhost:8000/api/sources/statistics" \
-  -H "Accept: application/json"
-```
-
-#### **4. Get Specific News Source**
-```bash
-curl -X GET "http://localhost:8000/api/sources/1" \
-  -H "Accept: application/json"
-```
-
----
-
-### 📂 **Categories Examples**
-
-#### **1. Get All Categories**
-```bash
-curl -X GET "http://localhost:8000/api/categories" \
-  -H "Accept: application/json"
-```
-
-#### **2. Get Active Categories Only**
-```bash
-curl -X GET "http://localhost:8000/api/categories/active" \
-  -H "Accept: application/json"
-```
-
-#### **3. Get Category Statistics**
-```bash
-curl -X GET "http://localhost:8000/api/categories/statistics" \
-  -H "Accept: application/json"
-```
-
-#### **4. Get Articles by Category**
-```bash
-curl -X GET "http://localhost:8000/api/articles/category/1?limit=10" \
-  -H "Accept: application/json"
-```
-
-#### **5. Get Articles by Source**
-```bash
-curl -X GET "http://localhost:8000/api/articles/source/1?limit=10" \
-  -H "Accept: application/json"
-```
-
----
-
-### 🔧 **News Aggregator Examples**
-
-#### **1. Trigger News Aggregation**
-```bash
-curl -X POST "http://localhost:8000/api/aggregator/aggregate" \
-  -H "Accept: application/json" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "sources": ["newsapi", "guardian"],
-    "limit": 50
-  }'
-```
-
-
-#### **2. Get System Statistics**
-```bash
-curl -X GET "http://localhost:8000/api/aggregator/statistics" \
-  -H "Accept: application/json"
-```
-
-#### **3. Get Dashboard Data**
-```bash
-curl -X GET "http://localhost:8000/api/aggregator/dashboard" \
-  -H "Accept: application/json"
-```
-
----
-
 
 ## Rate Limiting
 
-The API implements **Laravel's built-in throttling middleware** to prevent abuse and ensure fair usage. Different endpoints have different rate limits based on their sensitivity and usage patterns.
-
-### 📊 **Rate Limit Configuration**
+The API implements rate limiting to ensure fair usage:
 
 | Endpoint Category | Rate Limit | Description |
 |------------------|------------|-------------|
-| **Authentication** | 5 requests/minute | Login and registration endpoints |
-| **User Preferences** | 50 requests/minute | Authenticated user preference endpoints |
-| **Articles** | 100 requests/minute | Public article endpoints |
-| **Sources/Categories** | 60 requests/minute | News sources and categories |
-| **Aggregator** | 30 requests/minute | News aggregation and statistics |
+| Authentication | 5 requests/minute | Login and registration |
+| User Preferences | 50 requests/minute | Authenticated user endpoints |
+| Articles | 100 requests/minute | Public article endpoints |
+| Sources/Categories | 60 requests/minute | News sources and categories |
+| Aggregator | 30 requests/minute | News aggregation and statistics |
 
-### 🚨 **Rate Limit Response**
+When rate limits are exceeded, the API returns a 429 status code with retry information.
 
-When rate limits are exceeded, the API returns:
+## Error Handling
 
-**HTTP Status:** `429 Too Many Requests`
+### Common Error Scenarios
 
-**Response:**
+**401 Unauthorized (missing or invalid token):**
+```json
+{
+  "success": false,
+  "message": "Unauthenticated. Please provide a valid token."
+}
+```
+
+**422 Validation Error:**
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "errors": {
+    "email": ["The email field is required."]
+  }
+}
+```
+
+**429 Too Many Requests:**
 ```json
 {
   "success": false,
@@ -1041,73 +577,6 @@ When rate limits are exceeded, the API returns:
   "retry_after": 60
 }
 ```
-
-### 📋 **Rate Limit Headers**
-
-The API includes rate limit information in response headers:
-
-```
-X-RateLimit-Limit: 5
-X-RateLimit-Remaining: 3
-X-RateLimit-Reset: 1640995200
-Retry-After: 60
-```
-
-### 🔧 **Rate Limit Details**
-
-#### **Authentication Endpoints**
-- **Login/Register:** 5 requests per minute per IP
-- **Logout/Me/Refresh:** 20 requests per minute per authenticated user
-
-#### **Public Endpoints**
-- **Articles:** 100 requests per minute per IP
-- **Sources/Categories:** 60 requests per minute per IP
-
-#### **Protected Endpoints**
-- **User Preferences:** 50 requests per minute per authenticated user
-- **Personalized Articles:** 50 requests per minute per authenticated user
-
-#### **Admin Endpoints**
-- **Aggregator:** 30 requests per minute per IP
-
-### 💡 **Best Practices**
-
-1. **Implement Exponential Backoff:** If you receive a 429 response, wait before retrying
-2. **Cache Responses:** Store API responses locally to reduce API calls
-3. **Batch Requests:** Combine multiple requests when possible
-4. **Monitor Headers:** Check rate limit headers to avoid hitting limits
-
-### 🧪 **Testing Rate Limits**
-
-You can test rate limiting by making rapid requests to any endpoint:
-
-```bash
-# This will eventually return a 429 response
-for i in {1..10}; do
-  curl -X GET "http://localhost:8000/api/auth/login" \
-    -H "Accept: application/json"
-  echo "Request $i completed"
-done
-```
-
-### ⚙️ **Configuration**
-
-Rate limits are configured in `routes/api.php` using Laravel's throttle middleware:
-
-```php
-// Example: 5 requests per minute
-Route::middleware(['throttle:5,1'])->group(function () {
-    // Routes here
-});
-```
-
-**Format:** `throttle:requests,minutes`
-
-## Caching
-
-Some endpoints use caching to improve performance:
-- Statistics are cached for 5 minutes
-- Dashboard data is cached for 2 minutes
 
 ## Pagination
 
@@ -1128,18 +597,99 @@ Pagination information is included in the response:
 }
 ```
 
-## Filtering and Sorting
+## Best Practices
 
-### Articles Filtering
-- **Search**: Full-text search across title, description, and content
-- **Category**: Filter by specific category
-- **Source**: Filter by news source
-- **Author**: Filter by author name
-- **Date Range**: Filter by publication date
-- **Featured**: Filter featured articles
+1. **Store your token securely** - Don't hardcode it in your app
+2. **Handle rate limits gracefully** - Implement exponential backoff
+3. **Cache responses when possible** - Reduces API calls and improves performance
+4. **Use pagination** - Don't try to fetch all articles at once
+5. **Check the response status** - Always handle both success and error cases
+6. **Use appropriate filters** - Combine filters to get relevant results
+7. **Implement user preferences** - Provide personalized experiences
+8. **Monitor rate limit headers** - Check rate limit headers to avoid hitting limits
 
-### Sorting
-- Articles are sorted by publication date (newest first) by default
-- Featured articles are prioritized in search results
+## Examples
 
+### Complete User Flow
 
+1. **Register/Login:**
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
+
+2. **Get User Preferences (Auto-creates defaults):**
+```http
+GET /api/user/preferences
+Authorization: Bearer YOUR_TOKEN
+```
+*This automatically creates preferences with default values if they don't exist*
+
+3. **Update Preferences (Optional):**
+```http
+PUT /api/user/preferences
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "articles_per_page": 25,
+  "show_images": true,
+  "auto_refresh": true
+}
+```
+
+4. **Add Preferred Categories:**
+```http
+POST /api/user/preferences/categories
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "category_id": 1
+}
+```
+
+5. **Add Preferred Sources:**
+```http
+POST /api/user/preferences/sources
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "source_id": 2
+}
+```
+
+6. **Get Personalized Articles:**
+```http
+GET /api/user/personalized-articles?page=1&per_page=10
+Authorization: Bearer YOUR_TOKEN
+```
+
+### News Aggregation
+
+**Trigger Aggregation:**
+```http
+POST /api/aggregator/aggregate
+Content-Type: application/json
+
+{
+  "sources": ["newsapi", "guardian"],
+  "limit": 100
+}
+```
+
+**Check Statistics:**
+```http
+GET /api/aggregator/statistics
+```
+
+**Get Dashboard Data:**
+```http
+GET /api/aggregator/dashboard
+```
