@@ -31,3 +31,4 @@ class NewsSourceResource extends JsonResource
 }
 
 
+

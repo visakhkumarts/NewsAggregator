@@ -196,7 +196,41 @@ class NewsAggregatorService
      */
     public function getArticles(array $filters = [], int $page = 1, int $perPage = 20): array
     {
-        $query = Article::with(['newsSource', 'category'])->latest();
+        $query = Article::with(['newsSource', 'category']);
+
+        // Validate category_id exists if provided
+        if (isset($filters['category_id'])) {
+            $categoryExists = Category::where('id', $filters['category_id'])->exists();
+            if (!$categoryExists) {
+                return [
+                    'data' => [],
+                    'pagination' => [
+                        'current_page' => $page,
+                        'last_page' => 1,
+                        'per_page' => $perPage,
+                        'total' => 0,
+                        'has_more' => false,
+                    ]
+                ];
+            }
+        }
+
+        // Validate source_id exists if provided
+        if (isset($filters['source_id'])) {
+            $sourceExists = NewsSource::where('id', $filters['source_id'])->exists();
+            if (!$sourceExists) {
+                return [
+                    'data' => [],
+                    'pagination' => [
+                        'current_page' => $page,
+                        'last_page' => 1,
+                        'per_page' => $perPage,
+                        'total' => 0,
+                        'has_more' => false,
+                    ]
+                ];
+            }
+        }
 
         // Apply filters
         if (isset($filters['search'])) {
@@ -215,13 +249,31 @@ class NewsAggregatorService
             $query->byAuthor($filters['author']);
         }
 
-        if (isset($filters['date_from']) && isset($filters['date_to'])) {
-            $query->dateRange($filters['date_from'], $filters['date_to']);
+        // Handle date filtering - support both date_from only and date range
+        if (isset($filters['date_from'])) {
+            if (isset($filters['date_to'])) {
+                // Both dates provided - use date range
+                $query->dateRange($filters['date_from'], $filters['date_to']);
+            } else {
+                // Only date_from provided - filter from that date onwards
+                $query->where('published_at', '>=', $filters['date_from']);
+            }
+        } elseif (isset($filters['date_to'])) {
+            // Only date_to provided - filter up to that date
+            $query->where('published_at', '<=', $filters['date_to']);
         }
 
+        // Handle featured filtering - support both true and false values
         if (isset($filters['featured'])) {
-            $query->featured();
+            if ($filters['featured'] === true || $filters['featured'] === 'true' || $filters['featured'] === '1') {
+                $query->featured();
+            } elseif ($filters['featured'] === false || $filters['featured'] === 'false' || $filters['featured'] === '0') {
+                $query->where('is_featured', false);
+            }
         }
+
+        // Apply ordering after all filters
+        $query->latest('published_at');
 
         $articles = $query->paginate($perPage, ['*'], 'page', $page);
 
@@ -242,19 +294,34 @@ class NewsAggregatorService
      */
     public function getPersonalizedArticles(array $filters = [], int $page = 1, int $perPage = 20): array
     {
-        $query = Article::with(['newsSource', 'category'])->latest();
+        $query = Article::with(['newsSource', 'category']);
 
         // Apply standard filters
         if (isset($filters['search'])) {
             $query->search($filters['search']);
         }
 
-        if (isset($filters['date_from']) && isset($filters['date_to'])) {
-            $query->dateRange($filters['date_from'], $filters['date_to']);
+        // Handle date filtering - support both date_from only and date range
+        if (isset($filters['date_from'])) {
+            if (isset($filters['date_to'])) {
+                // Both dates provided - use date range
+                $query->dateRange($filters['date_from'], $filters['date_to']);
+            } else {
+                // Only date_from provided - filter from that date onwards
+                $query->where('published_at', '>=', $filters['date_from']);
+            }
+        } elseif (isset($filters['date_to'])) {
+            // Only date_to provided - filter up to that date
+            $query->where('published_at', '<=', $filters['date_to']);
         }
 
+        // Handle featured filtering - support both true and false values
         if (isset($filters['featured'])) {
-            $query->featured();
+            if ($filters['featured'] === true || $filters['featured'] === 'true' || $filters['featured'] === '1') {
+                $query->featured();
+            } elseif ($filters['featured'] === false || $filters['featured'] === 'false' || $filters['featured'] === '0') {
+                $query->where('is_featured', false);
+            }
         }
 
         // Apply user preference filters
@@ -273,6 +340,9 @@ class NewsAggregatorService
                 }
             });
         }
+
+        // Apply ordering after all filters
+        $query->latest('published_at');
 
         $articles = $query->paginate($perPage, ['*'], 'page', $page);
 

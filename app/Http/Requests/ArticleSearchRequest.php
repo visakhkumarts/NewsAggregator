@@ -40,3 +40,4 @@ class ArticleSearchRequest extends FormRequest
 }
 
 
+
