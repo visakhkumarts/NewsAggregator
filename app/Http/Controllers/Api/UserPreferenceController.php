@@ -202,6 +202,9 @@ class UserPreferenceController extends Controller
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Failed to add preferred category', [
                 'error' => $e->getMessage(),
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'user_id' => Auth::id(),
                 'category_id' => $request->get('category_id')
             ]);
@@ -234,6 +237,9 @@ class UserPreferenceController extends Controller
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Failed to remove preferred category', [
                 'error' => $e->getMessage(),
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'user_id' => Auth::id(),
                 'category_id' => $request->get('category_id')
             ]);

@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
+use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
+use Laravel\Sanctum\Exceptions\MissingAbilityException;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Auth\Access\AuthorizationException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -50,15 +54,15 @@ class Handler extends ExceptionHandler
      */
     protected function handleApiException(Request $request, Throwable $e): JsonResponse
     {
-        // Log the exception
+        // Log the exception for debugging
         Log::error('API Exception', [
             'message' => $e->getMessage(),
+            'type' => get_class($e),
             'file' => $e->getFile(),
             'line' => $e->getLine(),
-            'trace' => $e->getTraceAsString(),
             'url' => $request->fullUrl(),
             'method' => $request->method(),
-            'ip' => $request->ip(),
+            'headers' => $request->headers->all(),
         ]);
 
         // Handle validation exceptions
@@ -84,6 +88,37 @@ class Handler extends ExceptionHandler
                 'success' => false,
                 'message' => 'Method not allowed'
             ], 405);
+        }
+
+        // Handle authentication exceptions
+        if ($e instanceof AuthenticationException) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated. Please provide a valid token.'
+            ], 401);
+        }
+
+        if ($e instanceof UnauthorizedHttpException) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated. Please provide a valid token.'
+            ], 401);
+        }
+
+        // Handle authorization exceptions
+        if ($e instanceof AuthorizationException) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Insufficient permissions'
+            ], 403);
+        }
+
+        // Handle Sanctum missing ability exceptions
+        if ($e instanceof MissingAbilityException) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Insufficient permissions'
+            ], 403);
         }
 
         // Handle other exceptions

@@ -64,23 +64,7 @@ Content-Type: application/json
 }
 ```
 
-**Response:**
-```json
-{
-    "success": true,
-    "message": "User registered successfully",
-    "data": {
-        "user": {
-            "id": 1,
-            "name": "John Doe",
-            "email": "john@example.com",
-            "created_at": "2025-09-28T05:30:00.000000Z"
-        },
-        "token": "1|abcdef123456...",
-        "token_type": "Bearer"
-    }
-}
-```
+
 
 #### 2. User Login
 ```http
@@ -93,29 +77,7 @@ Content-Type: application/json
 }
 ```
 
-**Response:**
-```json
-{
-    "success": true,
-    "message": "Login successful",
-    "data": {
-        "user": {
-            "id": 1,
-            "name": "John Doe",
-            "email": "john@example.com",
-            "created_at": "2025-09-28T05:30:00.000000Z"
-        },
-        "token": "2|xyz789...",
-        "token_type": "Bearer"
-    }
-}
-```
 
-#### 3. Get Current User
-```http
-GET /api/auth/me
-Authorization: Bearer {token}
-```
 
 #### 4. Logout
 ```http
@@ -286,6 +248,25 @@ Content-Type: application/json
 }
 ```
 
+
+#### **2. Update User Preferences**
+```http
+curl -X PUT "http://localhost:8000/api/user/preferences" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -d '{
+    "preferred_sources": [1, 2, 3],
+    "preferred_categories": [1, 2],
+    "preferred_authors": ["John Doe", "Jane Smith"],
+    "articles_per_page": 25,
+    "show_images": true,
+    "auto_refresh": true,
+    "refresh_interval": 180
+  }
+```
+
+
 #### 7. Get Personalized Articles
 ```http
 GET /api/user/personalized-articles?limit=20
@@ -330,150 +311,6 @@ GET /api/aggregator/statistics
 
 ## 🧪 Testing Commands
 
-### Using cURL
-
-#### 1. Register a New User
-```bash
-curl -X POST http://localhost:8000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Test User",
-    "email": "test@example.com",
-    "password": "password123",
-    "password_confirmation": "password123"
-  }'
-```
-
-#### 2. Login User
-```bash
-curl -X POST http://localhost:8000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "test@example.com",
-    "password": "password123"
-  }'
-```
-
-#### 3. Get Articles (Public)
-```bash
-curl -X GET "http://localhost:8000/api/articles?limit=10"
-```
-
-#### 4. Get User Preferences (Protected)
-```bash
-curl -X GET http://localhost:8000/api/user/preferences \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE"
-```
-
-#### 5. Trigger News Aggregation
-```bash
-curl -X POST http://localhost:8000/api/aggregator/aggregate
-```
-
-### Using Postman Collection
-
-Create a Postman collection with these requests:
-
-1. **Environment Variables:**
-   - `base_url`: `http://localhost:8000/api`
-   - `token`: `{{token}}` (set after login)
-
-2. **Pre-request Script for Login:**
-```javascript
-pm.sendRequest({
-    url: pm.environment.get("base_url") + "/auth/login",
-    method: 'POST',
-    header: {
-        'Content-Type': 'application/json'
-    },
-    body: {
-        mode: 'raw',
-        raw: JSON.stringify({
-            email: "test@example.com",
-            password: "password123"
-        })
-    }
-}, function (err, response) {
-    if (response.json().success) {
-        pm.environment.set("token", response.json().data.token);
-    }
-});
-```
-
----
-
-## 📝 Sample Requests
-
-### Complete User Flow Example
-
-#### Step 1: Register User
-```bash
-curl -X POST http://localhost:8000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "John Doe",
-    "email": "john@example.com",
-    "password": "password123",
-    "password_confirmation": "password123"
-  }'
-```
-
-#### Step 2: Login (if not auto-logged in)
-```bash
-curl -X POST http://localhost:8000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "john@example.com",
-    "password": "password123"
-  }'
-```
-
-#### Step 3: Get User Info
-```bash
-curl -X GET http://localhost:8000/api/auth/me \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
-
-#### Step 4: Set User Preferences
-```bash
-curl -X PUT http://localhost:8000/api/user/preferences \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "language": "en",
-    "country": "us",
-    "articles_per_page": 15,
-    "show_images": true
-  }'
-```
-
-#### Step 5: Add Preferred Categories
-```bash
-curl -X POST http://localhost:8000/api/user/preferences/categories \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "category_id": 1
-  }'
-```
-
-#### Step 6: Get Personalized Articles
-```bash
-curl -X GET "http://localhost:8000/api/user/personalized-articles?limit=10" \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
-
-#### Step 7: Trigger News Aggregation
-```bash
-curl -X POST http://localhost:8000/api/aggregator/aggregate
-```
-
-#### Step 8: Search for Specific Articles
-```bash
-curl -X GET "http://localhost:8000/api/articles/search?q=technology&limit=5"
-```
-
----
 
 ## 🚨 Error Handling
 

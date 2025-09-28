@@ -39,6 +39,8 @@ class UserPreference extends Model
         'show_images' => 'boolean',
         'auto_refresh' => 'boolean',
         'refresh_interval' => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     /**
@@ -102,6 +104,12 @@ class UserPreference extends Model
     public function addPreferredCategory(int $categoryId): void
     {
         $categories = $this->preferred_categories ?? [];
+        
+        // Ensure we have a valid array
+        if (!is_array($categories)) {
+            $categories = [];
+        }
+        
         if (!in_array($categoryId, $categories)) {
             $categories[] = $categoryId;
             $this->preferred_categories = $categories;
@@ -115,7 +123,17 @@ class UserPreference extends Model
     public function removePreferredCategory(int $categoryId): void
     {
         $categories = $this->preferred_categories ?? [];
-        $this->preferred_categories = array_values(array_filter($categories, fn($id) => $id !== $categoryId));
+        
+        // Ensure we have a valid array
+        if (!is_array($categories)) {
+            $categories = [];
+        }
+        
+        // Filter out the category ID and reindex the array
+        $this->preferred_categories = array_values(array_filter($categories, function($id) use ($categoryId) {
+            return (int)$id !== $categoryId;
+        }));
+        
         $this->save();
     }
 

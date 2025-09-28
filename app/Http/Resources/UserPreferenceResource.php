@@ -26,8 +26,8 @@ class UserPreferenceResource extends JsonResource
             'show_images' => $this->show_images,
             'auto_refresh' => $this->auto_refresh,
             'refresh_interval' => $this->refresh_interval,
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
+            'created_at' => $this->created_at?->toISOString(),
+            'updated_at' => $this->updated_at?->toISOString(),
             
             // Include related data
             'preferred_sources_data' => $this->whenLoaded('preferredNewsSources', function () {
