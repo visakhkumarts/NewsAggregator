@@ -37,3 +37,4 @@ class ArticleResource extends JsonResource
 
 
 
+

@@ -84,6 +84,14 @@ class ArticleController extends Controller
             $limit = $request->get('limit', 5);
             $articles = $this->newsAggregatorService->getFeaturedArticles($limit);
 
+            // Check if no featured articles found
+            if ($articles->isEmpty()) {
+                return ApiResponseResource::success([
+                    'data' => [],
+                    'message' => 'No featured articles found.'
+                ], 'No featured articles found.');
+            }
+
             return ApiResponseResource::success(ArticleResource::collection($articles));
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ApiResponseResource::error('Validation failed', $e->errors(), 422);
@@ -115,6 +123,15 @@ class ArticleController extends Controller
 
             $limit = $request->get('limit', 20);
             $articles = $this->newsAggregatorService->getArticlesByCategory($categoryId, $limit);
+
+            // Check if no articles found for this category
+            if ($articles->isEmpty()) {
+                return ApiResponseResource::success([
+                    'data' => [],
+                    'category' => new \App\Http\Resources\CategoryResource($category),
+                    'message' => "No articles found in category '{$category->name}'."
+                ], "No articles found in category '{$category->name}'.");
+            }
 
             return ApiResponseResource::success([
                 'data' => ArticleResource::collection($articles),
