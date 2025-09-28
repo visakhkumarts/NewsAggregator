@@ -13,7 +13,7 @@ class UpdateNewsCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'news:update {--sources=* : Specific sources to update} {--limit=50 : Maximum articles per source}';
+    protected $signature = 'news:update {--sources= : Comma-separated list of sources to update} {--limit=50 : Maximum articles per source}';
 
     /**
      * The console command description.
@@ -40,7 +40,9 @@ class UpdateNewsCommand extends Command
         $options = [];
         
         if ($this->option('sources')) {
-            $options['sources'] = $this->option('sources');
+            // Parse comma-separated sources
+            $sources = array_map('trim', explode(',', $this->option('sources')));
+            $options['sources'] = $sources;
         }
         
         if ($this->option('limit')) {
