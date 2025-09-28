@@ -26,7 +26,7 @@ class ArticleIndexRequest extends FormRequest
             'author' => 'nullable|string|max:255',
             'date_from' => 'nullable|date',
             'date_to' => 'nullable|date|after_or_equal:date_from',
-            'featured' => 'nullable|boolean',
+            'featured' => 'nullable|in:true,false,1,0',
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1|max:100',
         ];

@@ -47,6 +47,16 @@ class NewsAggregatorController extends Controller
         try {
             $stats = $this->newsAggregatorService->getStatistics();
 
+            // Check if no statistics available
+            if (empty($stats) || (isset($stats['total_articles']) && $stats['total_articles'] === 0)) {
+                $message = "No statistics available. No articles have been aggregated yet.";
+                
+                return ApiResponseResource::success([
+                    'data' => $stats ?: [],
+                    'message' => $message
+                ], $message);
+            }
+
             return ApiResponseResource::success($stats);
         } catch (\Exception $e) {
             Log::error('Failed to get statistics', [
@@ -66,6 +76,21 @@ class NewsAggregatorController extends Controller
             $stats = $this->newsAggregatorService->getStatistics();
             $featuredArticles = $this->newsAggregatorService->getFeaturedArticles(5);
             $latestArticles = $this->newsAggregatorService->getArticles([], 1, 10);
+
+            // Check if no dashboard data available
+            $hasData = !empty($featuredArticles) || !empty($latestArticles['data']) || 
+                      (isset($stats['total_articles']) && $stats['total_articles'] > 0);
+
+            if (!$hasData) {
+                $message = "No dashboard data available. No articles have been aggregated yet.";
+                
+                return ApiResponseResource::success([
+                    'statistics' => $stats ?: [],
+                    'featured_articles' => [],
+                    'latest_articles' => [],
+                    'message' => $message
+                ], $message);
+            }
 
             return ApiResponseResource::success([
                 'statistics' => $stats,

@@ -8,6 +8,15 @@ Complete API reference for the News Aggregator backend service.
 http://localhost:8000/api
 ```
 
+## Request Headers
+
+**Standard Headers for All Requests:**
+- `Accept: application/json` - Required for all requests
+- `Content-Type: application/json` - Required for POST/PUT/DELETE requests with body
+- `Authorization: Bearer YOUR_TOKEN` - Required for protected endpoints  (only if authentication needed)
+
+*Note: All examples below assume these standard headers are included.*
+
 ## Authentication
 
 The API uses Bearer token authentication for protected endpoints. Obtain a token by registering or logging in.
@@ -15,7 +24,6 @@ The API uses Bearer token authentication for protected endpoints. Obtain a token
 ### Register New User
 ```http
 POST /api/auth/register
-Content-Type: application/json
 
 {
     "name": "John Doe",
@@ -28,10 +36,9 @@ Content-Type: application/json
 ### Login
 ```http
 POST /api/auth/login
-Content-Type: application/json
 
 {
-  "email": "john@example.com",
+    "email": "john@example.com",
     "password": "password123"
 }
 ```
@@ -40,7 +47,6 @@ Content-Type: application/json
 ```http
 GET /api/user/preferences
 Authorization: Bearer YOUR_TOKEN_HERE
-Accept: application/json
 ```
 
 ### Token Management
@@ -173,10 +179,7 @@ GET /api/categories/{id}
 #### Trigger News Aggregation
 ```http
 POST /api/aggregator/aggregate
-```
 
-Request Body:
-```json
 {
   "sources": ["newsapi", "guardian", "nytimes"],
   "categories": ["technology", "business"],
@@ -204,40 +207,17 @@ GET /api/user/preferences
 Authorization: Bearer YOUR_TOKEN
 ```
 
-**Response (First time - creates defaults):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": 1,
-    "user_id": 1,
-    "preferred_sources": [],
-    "preferred_categories": [],
-    "preferred_authors": [],
-    "language": "en",
-    "country": "us",
-    "articles_per_page": 20,
-    "show_images": true,
-    "auto_refresh": false,
-    "refresh_interval": 300,
-    "created_at": "2024-01-15T10:30:00Z",
-    "updated_at": "2024-01-15T10:30:00Z"
-  }
-}
-```
-
 #### Update User Preferences
 ```http
 PUT /api/user/preferences
 Authorization: Bearer YOUR_TOKEN
-Content-Type: application/json
 
 {
   "preferred_sources": [1, 2, 3],
   "preferred_categories": [1, 2],
   "preferred_authors": ["John Doe", "Jane Smith"],
-  "language": "en",
-  "country": "us",
+    "language": "en",
+    "country": "us",
     "articles_per_page": 25,
     "show_images": true,
     "auto_refresh": true,
@@ -262,7 +242,6 @@ Content-Type: application/json
 ```http
 POST /api/user/preferences/sources
 Authorization: Bearer YOUR_TOKEN
-Content-Type: application/json
 
 {
   "source_id": 1
@@ -273,7 +252,6 @@ Content-Type: application/json
 ```http
 DELETE /api/user/preferences/sources
 Authorization: Bearer YOUR_TOKEN
-Content-Type: application/json
 
 {
   "source_id": 1
@@ -282,28 +260,11 @@ Content-Type: application/json
 
 #### Manage Preferred Categories
 
-**. Update User Preferences**
-```http
-curl -X PUT "http://localhost:8000/api/user/preferences" \
-  -H "Accept: application/json" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
-  -d '{
-    "preferred_sources": [1, 2, 3],
-    "preferred_categories": [1, 2],
-    "preferred_authors": ["John Doe", "Jane Smith"],
-    "articles_per_page": 25,
-    "show_images": true,
-    "auto_refresh": true,
-    "refresh_interval": 180
-  }
-```
 
 **Add Category:**
 ```http
 POST /api/user/preferences/categories
 Authorization: Bearer YOUR_TOKEN
-Content-Type: application/json
 
 {
   "category_id": 1
@@ -314,7 +275,6 @@ Content-Type: application/json
 ```http
 DELETE /api/user/preferences/categories
 Authorization: Bearer YOUR_TOKEN
-Content-Type: application/json
 
 {
   "category_id": 1
@@ -329,71 +289,148 @@ Authorization: Bearer YOUR_TOKEN
 
 Supports same query parameters as regular articles endpoint, plus user preferences are automatically applied.
 
+## Search Queries & Filtering
+
+### Search Queries
+The API supports powerful search functionality across multiple fields:
+
+**Basic Search:**
+```http
+GET /api/articles?search=technology
+GET /api/articles?search=artificial intelligence
+GET /api/articles?search=climate change
+```
+
+**Search with Filters:**
+```http
+GET /api/articles?search=AI&category_id=1&source_id=2
+GET /api/articles?search=bitcoin&date_from=2024-01-01
+```
+
+**Search in Specific Fields:**
+- **Title**: Searches article titles
+- **Description**: Searches article descriptions  
+- **Content**: Searches article content
+- **Author**: Searches author names
+
 ## Advanced Filtering
 
 The API supports comprehensive filtering across multiple criteria:
 
 ### Date Filtering
-```javascript
-// Articles from a specific date
+```http
+# Articles from a specific date
 GET /api/articles?date_from=2024-01-15&date_to=2024-01-15
 
-// Articles from the last week
+# Articles from the last week
 GET /api/articles?date_from=2024-01-08&date_to=2024-01-15
 
-// Articles from a specific month
+# Articles from a specific month
 GET /api/articles?date_from=2024-01-01&date_to=2024-01-31
+
+# Articles from today
+GET /api/articles?date_from=2024-01-15&date_to=2024-01-15
 ```
+
+**Date Format:** YYYY-MM-DD (ISO 8601)
+**Parameters:**
+- `date_from` - Start date (inclusive)
+- `date_to` - End date (inclusive)
 
 ### Category Filtering
-```javascript
-// Get all technology articles
+```http
+# Get all technology articles
 GET /api/articles?category_id=1
 
-// Get business articles with pagination
+# Get business articles with pagination
 GET /api/articles?category_id=2&page=1&per_page=10
+
+# Get health articles from last week
+GET /api/articles?category_id=4&date_from=2024-01-08&date_to=2024-01-15
 ```
+
+**Available Categories:**
+- Technology (1)
+- Business (2) 
+- Sports (3)
+- Health (4)
+- Science (5)
+- Entertainment (6)
+- Politics (7)
 
 ### Source Filtering
-```javascript
-// Get articles from NewsAPI only
+```http
+# Get articles from NewsAPI only
 GET /api/articles?source_id=1
 
-// Get articles from The Guardian only
+# Get articles from The Guardian only
 GET /api/articles?source_id=2
+
+# Get articles from New York Times only
+GET /api/articles?source_id=3
 ```
 
+**Available Sources:**
+- NewsAPI (1)
+- The Guardian (2)
+- New York Times (3)
+
 ### Author Filtering
-```javascript
-// Get articles by specific author
+```http
+# Get articles by specific author
 GET /api/articles?author=John%20Doe
 
-// Get articles by author with partial name match
+# Get articles by author with partial name match
 GET /api/articles?author=Smith
+
+# Get articles by multiple authors (use multiple requests)
+GET /api/articles?author=Jane%20Smith
 ```
 
 ### Featured Articles
-```javascript
-// Get only featured articles
+```http
+# Get only featured articles
 GET /api/articles?featured=true
 
-// Get featured articles from specific category
+# Get non-featured articles
+GET /api/articles?featured=false
+
+# Get featured articles from specific category
 GET /api/articles?featured=true&category_id=1
+
+# Get featured technology articles from last month
+GET /api/articles?featured=true&category_id=1&date_from=2024-01-01&date_to=2024-01-31
 ```
+
+**Featured Parameter Values:**
+- `true` - Show only featured articles
+- `false` - Show only non-featured articles
+- Omit parameter - Show all articles (both featured and non-featured)
+
 
 ### Search with Filtering
-```javascript
-// Search for "AI" in technology category
+```http
+# Search for "AI" in technology category
 GET /api/articles?search=AI&category_id=1
 
-// Search for "climate" from specific source
+# Search for "climate" from specific source
 GET /api/articles?search=climate&source_id=2
+
+# Search for "bitcoin" in business category from last week
+GET /api/articles?search=bitcoin&category_id=2&date_from=2024-01-08&date_to=2024-01-15
 ```
 
+
 ### Complex Filtering
-```javascript
-// Multiple criteria combined
+```http
+# Multiple criteria combined
 GET /api/articles?category_id=1&source_id=2&date_from=2024-01-01&featured=true&search=technology
+
+# Technology articles from NewsAPI, last month, with pagination
+GET /api/articles?category_id=1&source_id=1&date_from=2024-01-01&date_to=2024-01-31&page=1&per_page=20
+
+# Featured business articles by specific author
+GET /api/articles?category_id=2&author=John%20Doe&featured=true
 ```
 
 ## Search Queries
@@ -426,30 +463,43 @@ GET /api/articles/search?q=AI&source_id=2&featured=true
 4. **Individual Management**: You can add/remove individual sources and categories
 5. **Bulk Updates**: You can update multiple preferences at once
 
-### Preference Fields
+### User Preference Fields
 
-**Available Settings:**
-- `preferred_sources` - Array of news source IDs
-- `preferred_categories` - Array of category IDs  
-- `preferred_authors` - Array of author names
-- `language` - Preferred language (default: "en")
-- `country` - Preferred country (default: "us")
-- `articles_per_page` - Number of articles per page (default: 20)
+**Selected Sources:**
+- `preferred_sources` - Array of news source IDs (e.g., [1, 2, 3])
+- **Available Sources**: NewsAPI (1), The Guardian (2), New York Times (3)
+- **Usage**: Filters articles to show only from preferred sources
+
+**Selected Categories:**
+- `preferred_categories` - Array of category IDs (e.g., [1, 2, 4])
+- **Available Categories**: Technology (1), Business (2), Sports (3), Health (4), etc.
+- **Usage**: Filters articles to show only from preferred categories
+
+**Selected Authors:**
+- `preferred_authors` - Array of author names (e.g., ["John Doe", "Jane Smith"])
+- **Usage**: Filters articles to show only from preferred authors
+
+**Display Settings:**
+- `language` - Preferred language code (default: "en")
+- `country` - Preferred country code (default: "us")
+- `articles_per_page` - Number of articles per page (default: 20, max: 100)
 - `show_images` - Whether to show article images (default: true)
 - `auto_refresh` - Enable auto-refresh (default: false)
-- `refresh_interval` - Refresh interval in seconds (default: 300)
+- `refresh_interval` - Refresh interval in seconds (default: 300, min: 60, max: 3600)
 
 ### Managing Preferences
 
 **Get Current Preferences:**
 ```http
 GET /api/user/preferences
+Accept: application/json
 Authorization: Bearer YOUR_TOKEN
 ```
 
 **Update Multiple Preferences:**
 ```http
 PUT /api/user/preferences
+Accept: application/json
 Authorization: Bearer YOUR_TOKEN
 Content-Type: application/json
 
@@ -469,6 +519,7 @@ Content-Type: application/json
 Add Preferred Source:
 ```http
 POST /api/user/preferences/sources
+Accept: application/json
 Authorization: Bearer YOUR_TOKEN
 Content-Type: application/json
 
@@ -480,6 +531,7 @@ Content-Type: application/json
 Add Preferred Category:
 ```http
 POST /api/user/preferences/categories
+Accept: application/json
 Authorization: Bearer YOUR_TOKEN
 Content-Type: application/json
 
@@ -493,6 +545,7 @@ Content-Type: application/json
 Remove Preferred Source:
 ```http
 DELETE /api/user/preferences/sources
+Accept: application/json
 Authorization: Bearer YOUR_TOKEN
 Content-Type: application/json
 
@@ -504,6 +557,7 @@ Content-Type: application/json
 Remove Preferred Category:
 ```http
 DELETE /api/user/preferences/categories
+Accept: application/json
 Authorization: Bearer YOUR_TOKEN
 Content-Type: application/json
 
@@ -517,18 +571,21 @@ Content-Type: application/json
 ### Get Personalized Feed
 ```http
 GET /api/user/personalized-articles
+Accept: application/json
 Authorization: Bearer YOUR_TOKEN
 ```
 
 ### Personalized Feed with Search
 ```http
 GET /api/user/personalized-articles?search=technology
+Accept: application/json
 Authorization: Bearer YOUR_TOKEN
 ```
 
 ### Personalized Feed with Filters
 ```http
 GET /api/user/personalized-articles?search=AI&featured=true&date_from=2024-01-01&page=1&per_page=15
+Accept: application/json
 Authorization: Bearer YOUR_TOKEN
 ```
 
@@ -597,16 +654,11 @@ Pagination information is included in the response:
 }
 ```
 
-## Best Practices
+## No Results Responses
 
-1. **Store your token securely** - Don't hardcode it in your app
-2. **Handle rate limits gracefully** - Implement exponential backoff
-3. **Cache responses when possible** - Reduces API calls and improves performance
-4. **Use pagination** - Don't try to fetch all articles at once
-5. **Check the response status** - Always handle both success and error cases
-6. **Use appropriate filters** - Combine filters to get relevant results
-7. **Implement user preferences** - Provide personalized experiences
-8. **Monitor rate limit headers** - Check rate limit headers to avoid hitting limits
+All API endpoints provide meaningful responses when no data is found, including descriptive messages and applied filters information.
+
+
 
 ## Examples
 
@@ -615,7 +667,6 @@ Pagination information is included in the response:
 1. **Register/Login:**
 ```http
 POST /api/auth/login
-Content-Type: application/json
 
 {
   "email": "user@example.com",
@@ -634,7 +685,6 @@ Authorization: Bearer YOUR_TOKEN
 ```http
 PUT /api/user/preferences
 Authorization: Bearer YOUR_TOKEN
-Content-Type: application/json
 
 {
   "articles_per_page": 25,
@@ -647,7 +697,6 @@ Content-Type: application/json
 ```http
 POST /api/user/preferences/categories
 Authorization: Bearer YOUR_TOKEN
-Content-Type: application/json
 
 {
   "category_id": 1
@@ -658,7 +707,6 @@ Content-Type: application/json
 ```http
 POST /api/user/preferences/sources
 Authorization: Bearer YOUR_TOKEN
-Content-Type: application/json
 
 {
   "source_id": 2
@@ -676,7 +724,6 @@ Authorization: Bearer YOUR_TOKEN
 **Trigger Aggregation:**
 ```http
 POST /api/aggregator/aggregate
-Content-Type: application/json
 
 {
   "sources": ["newsapi", "guardian"],

@@ -31,10 +31,26 @@ class ArticleController extends Controller
             'date_from', 'date_to', 'featured'
         ]);
 
+        // Convert featured string to boolean
+        if (isset($filters['featured'])) {
+            $filters['featured'] = filter_var($filters['featured'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        }
+
         $page = $request->get('page', 1);
         $perPage = $request->get('per_page', 20);
 
         $result = $this->newsAggregatorService->getArticles($filters, $page, $perPage);
+
+        // Check if no results found
+        if (empty($result['data']) && $result['pagination']['total'] === 0) {
+            $message = $this->buildNoResultsMessage($filters);
+            return ApiResponseResource::success([
+                'data' => [],
+                'pagination' => $result['pagination'],
+                'message' => $message,
+                'filters_applied' => $this->getAppliedFilters($filters)
+            ], $message);
+        }
 
         return ApiResponseResource::success([
             'data' => ArticleResource::collection($result['data']),
@@ -161,6 +177,19 @@ class ArticleController extends Controller
 
         $result = $this->newsAggregatorService->getArticles($filters, $page, $perPage);
 
+        // Check if no results found
+        if (empty($result['data']) && $result['pagination']['total'] === 0) {
+            $query = $request->get('q');
+            $message = "No articles found for search term '{$query}'.";
+            
+            return ApiResponseResource::success([
+                'data' => [],
+                'pagination' => $result['pagination'],
+                'query' => $query,
+                'message' => $message
+            ], $message);
+        }
+
         return ApiResponseResource::success([
             'data' => ArticleResource::collection($result['data']),
             'pagination' => $result['pagination'],
@@ -197,5 +226,64 @@ class ArticleController extends Controller
             
             return ApiResponseResource::error('Failed to retrieve latest articles', null, 500);
         }
+    }
+
+    /**
+     * Build a descriptive message when no results are found.
+     */
+    protected function buildNoResultsMessage(array $filters): string
+    {
+        $conditions = [];
+        
+        if (isset($filters['search'])) {
+            $conditions[] = "search term '{$filters['search']}'";
+        }
+        
+        if (isset($filters['category_id'])) {
+            $category = \App\Models\Category::find($filters['category_id']);
+            $categoryName = $category ? $category->name : "category ID {$filters['category_id']}";
+            $conditions[] = "category '{$categoryName}'";
+        }
+        
+        if (isset($filters['source_id'])) {
+            $source = \App\Models\NewsSource::find($filters['source_id']);
+            $sourceName = $source ? $source->name : "source ID {$filters['source_id']}";
+            $conditions[] = "source '{$sourceName}'";
+        }
+        
+        if (isset($filters['author'])) {
+            $conditions[] = "author '{$filters['author']}'";
+        }
+        
+        if (isset($filters['date_from']) && isset($filters['date_to'])) {
+            $conditions[] = "date range from {$filters['date_from']} to {$filters['date_to']}";
+        }
+        
+        if (isset($filters['featured'])) {
+            $featuredText = $filters['featured'] ? 'featured' : 'non-featured';
+            $conditions[] = "{$featuredText} articles";
+        }
+        
+        if (empty($conditions)) {
+            return "No articles found in the database.";
+        }
+        
+        return "No articles found matching " . implode(', ', $conditions) . ".";
+    }
+
+    /**
+     * Get a summary of applied filters for debugging.
+     */
+    protected function getAppliedFilters(array $filters): array
+    {
+        $applied = [];
+        
+        foreach ($filters as $key => $value) {
+            if ($value !== null && $value !== '') {
+                $applied[$key] = $value;
+            }
+        }
+        
+        return $applied;
     }
 }

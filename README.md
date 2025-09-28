@@ -46,7 +46,7 @@ A professional Laravel-based news aggregator backend that fetches articles from 
    NEWS_API_KEY=your_newsapi_key_here
    GUARDIAN_API_KEY=your_guardian_key_here
    NYTIMES_API_KEY=your_nytimes_key_here
-   SANCTUM_TOKEN_EXPIRATION=null
+   SANCTUM_TOKEN_EXPIRATION=20160 #(14 days)
    ```
 
 5. **Database Setup**
@@ -156,5 +156,5 @@ Configure your API keys in the `.env` file:
 NEWS_API_KEY=your_newsapi_key_here
 GUARDIAN_API_KEY=your_guardian_key_here
 NYTIMES_API_KEY=your_nytimes_key_here
-SANCTUM_TOKEN_EXPIRATION=null
+SANCTUM_TOKEN_EXPIRATION=20160 #(14 days)
 ```

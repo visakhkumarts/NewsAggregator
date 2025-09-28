@@ -26,6 +26,20 @@ class NewsSourceController extends Controller
         // Order by priority and name
         $sources = $query->ordered()->get();
 
+        // Check if no results found
+        if ($sources->isEmpty()) {
+            $activeFilter = $request->has('active') ? ($request->boolean('active') ? 'active' : 'inactive') : null;
+            $message = $activeFilter 
+                ? "No {$activeFilter} news sources found."
+                : "No news sources found in the database.";
+            
+            return ApiResponseResource::success([
+                'data' => [],
+                'message' => $message,
+                'filters_applied' => $request->has('active') ? ['active' => $request->boolean('active')] : []
+            ], $message);
+        }
+
         return ApiResponseResource::success(NewsSourceResource::collection($sources));
     }
 
@@ -50,6 +64,16 @@ class NewsSourceController extends Controller
     {
         $sources = NewsSource::active()->ordered()->get();
 
+        // Check if no active sources found
+        if ($sources->isEmpty()) {
+            $message = "No active news sources found.";
+            
+            return ApiResponseResource::success([
+                'data' => [],
+                'message' => $message
+            ], $message);
+        }
+
         return ApiResponseResource::success(NewsSourceResource::collection($sources));
     }
 
@@ -61,6 +85,16 @@ class NewsSourceController extends Controller
         $sources = NewsSource::withCount('articles')
             ->orderBy('articles_count', 'desc')
             ->get();
+
+        // Check if no sources found
+        if ($sources->isEmpty()) {
+            $message = "No news sources found for statistics.";
+            
+            return ApiResponseResource::success([
+                'data' => [],
+                'message' => $message
+            ], $message);
+        }
 
         return ApiResponseResource::success(NewsSourceResource::collection($sources));
     }

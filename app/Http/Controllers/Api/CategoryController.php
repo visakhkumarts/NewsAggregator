@@ -25,6 +25,20 @@ class CategoryController extends Controller
 
         $categories = $query->orderBy('name')->get();
 
+        // Check if no results found
+        if ($categories->isEmpty()) {
+            $activeFilter = $request->has('active') ? ($request->boolean('active') ? 'active' : 'inactive') : null;
+            $message = $activeFilter 
+                ? "No {$activeFilter} categories found."
+                : "No categories found in the database.";
+            
+            return ApiResponseResource::success([
+                'data' => [],
+                'message' => $message,
+                'filters_applied' => $request->has('active') ? ['active' => $request->boolean('active')] : []
+            ], $message);
+        }
+
         return ApiResponseResource::success(CategoryResource::collection($categories));
     }
 
@@ -49,6 +63,16 @@ class CategoryController extends Controller
     {
         $categories = Category::active()->orderBy('name')->get();
 
+        // Check if no active categories found
+        if ($categories->isEmpty()) {
+            $message = "No active categories found.";
+            
+            return ApiResponseResource::success([
+                'data' => [],
+                'message' => $message
+            ], $message);
+        }
+
         return ApiResponseResource::success(CategoryResource::collection($categories));
     }
 
@@ -60,6 +84,16 @@ class CategoryController extends Controller
         $categories = Category::withCount('articles')
             ->orderBy('articles_count', 'desc')
             ->get();
+
+        // Check if no categories found
+        if ($categories->isEmpty()) {
+            $message = "No categories found for statistics.";
+            
+            return ApiResponseResource::success([
+                'data' => [],
+                'message' => $message
+            ], $message);
+        }
 
         return ApiResponseResource::success(CategoryResource::collection($categories));
     }

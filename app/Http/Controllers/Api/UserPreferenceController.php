@@ -260,8 +260,15 @@ class UserPreferenceController extends Controller
         
             if (!$preferences) {
                 // Return regular articles if no preferences
+                $filters = $request->only(['search', 'date_from', 'date_to', 'featured']);
+                
+                // Convert featured string to boolean
+                if (isset($filters['featured'])) {
+                    $filters['featured'] = filter_var($filters['featured'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+                }
+                
                 $service = app(\App\Services\NewsAggregatorService::class);
-                $result = $service->getArticles($request->only(['search', 'date_from', 'date_to', 'featured']), $request->get('page', 1), $request->get('per_page', 20));
+                $result = $service->getArticles($filters, $request->get('page', 1), $request->get('per_page', 20));
                 
                 return ApiResponseResource::success([
                     'data' => \App\Http\Resources\ArticleResource::collection($result['data']),
@@ -274,6 +281,11 @@ class UserPreferenceController extends Controller
             $filters = $request->only([
                 'search', 'date_from', 'date_to', 'featured'
             ]);
+
+            // Convert featured string to boolean
+            if (isset($filters['featured'])) {
+                $filters['featured'] = filter_var($filters['featured'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            }
 
             // Add user preferences to filters
             if ($preferences->preferred_sources) {
@@ -295,6 +307,22 @@ class UserPreferenceController extends Controller
             $service = app(\App\Services\NewsAggregatorService::class);
             $result = $service->getPersonalizedArticles($filters, $page, $perPage);
 
+            // Check if no results found
+            if (empty($result['data']) && $result['pagination']['total'] === 0) {
+                $message = $this->buildPersonalizedNoResultsMessage($filters, $preferences);
+                
+                return ApiResponseResource::success([
+                    'data' => [],
+                    'pagination' => $result['pagination'],
+                    'preferences_applied' => [
+                        'preferred_sources' => $preferences->preferred_sources ?? [],
+                        'preferred_categories' => $preferences->preferred_categories ?? [],
+                        'preferred_authors' => $preferences->preferred_authors ?? []
+                    ],
+                    'message' => $message
+                ], $message);
+            }
+
             return ApiResponseResource::success([
                 'data' => \App\Http\Resources\ArticleResource::collection($result['data']),
                 'pagination' => $result['pagination'],
@@ -312,5 +340,56 @@ class UserPreferenceController extends Controller
             
             return ApiResponseResource::error('Failed to retrieve personalized articles', null, 500);
         }
+    }
+
+    /**
+     * Build a descriptive message when no personalized results are found.
+     */
+    protected function buildPersonalizedNoResultsMessage(array $filters, \App\Models\UserPreference $preferences): string
+    {
+        $conditions = [];
+        
+        if (isset($filters['search'])) {
+            $conditions[] = "search term '{$filters['search']}'";
+        }
+        
+        if (isset($filters['date_from']) && isset($filters['date_to'])) {
+            $conditions[] = "date range from {$filters['date_from']} to {$filters['date_to']}";
+        }
+        
+        if (isset($filters['featured'])) {
+            $featuredText = $filters['featured'] ? 'featured' : 'non-featured';
+            $conditions[] = "{$featuredText} articles";
+        }
+        
+        $preferenceConditions = [];
+        
+        if (!empty($preferences->preferred_sources)) {
+            $sourceNames = \App\Models\NewsSource::whereIn('id', $preferences->preferred_sources)->pluck('name')->toArray();
+            $preferenceConditions[] = "preferred sources: " . implode(', ', $sourceNames);
+        }
+        
+        if (!empty($preferences->preferred_categories)) {
+            $categoryNames = \App\Models\Category::whereIn('id', $preferences->preferred_categories)->pluck('name')->toArray();
+            $preferenceConditions[] = "preferred categories: " . implode(', ', $categoryNames);
+        }
+        
+        if (!empty($preferences->preferred_authors)) {
+            $preferenceConditions[] = "preferred authors: " . implode(', ', $preferences->preferred_authors);
+        }
+        
+        $message = "No personalized articles found";
+        
+        if (!empty($conditions)) {
+            $message .= " matching " . implode(', ', $conditions);
+        }
+        
+        if (!empty($preferenceConditions)) {
+            $message .= " with your preferences (" . implode(', ', $preferenceConditions) . ")";
+        }
+        
+        $message .= ".";
+        
+        return $message;
     }
 }
